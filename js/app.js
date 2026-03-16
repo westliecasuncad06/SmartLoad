@@ -349,7 +349,107 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize pagination (Dashboard / Teachers / Subjects / Audit Trail)
     initSmartPagination();
+
+    // Initialize Predictive HR Insights (Load Reports)
+    initPredictiveHrInsights();
 });
+
+// --------------------------------------------------
+// Load Reports - Predictive HR Insights
+// --------------------------------------------------
+function initPredictiveHrInsights() {
+    const container = document.getElementById('predictiveHrInsights');
+    if (!container) return;
+
+    const statusEl = document.getElementById('predictiveHrInsightsStatus');
+
+    const setStatus = (message) => {
+        if (statusEl) {
+            statusEl.textContent = message;
+            statusEl.classList.remove('hidden');
+        }
+    };
+
+    const clearStatus = () => {
+        if (statusEl) statusEl.classList.add('hidden');
+    };
+
+    const renderEmpty = () => {
+        container.innerHTML =
+            '<div class="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700">'
+            + 'No shortage risks detected based on current data.'
+            + '</div>';
+    };
+
+    const renderError = (message) => {
+        container.innerHTML =
+            '<div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-900">'
+            + (message || 'Unable to load forecast data.')
+            + '</div>';
+    };
+
+    const renderShortages = (shortages) => {
+        if (!Array.isArray(shortages) || shortages.length === 0) {
+            renderEmpty();
+            return;
+        }
+
+        const cards = shortages.map((row) => {
+            const subjectName = row.subject_name || 'Unknown Subject';
+            const projectedUnits = Number(row.projected_units_needed || 0);
+            const totalCapacity = Number(row.total_faculty_capacity || 0);
+            const unitShortage = Number(
+                row.unit_shortage != null
+                    ? row.unit_shortage
+                    : Math.max(0, projectedUnits - totalCapacity)
+            );
+
+            const recommendedAction = unitShortage <= 12
+                ? 'Hire 1 Part-Time Instructor'
+                : 'Hire 1 Full-Time Instructor';
+
+            const message = `Shortage Risk: ${subjectName}. Projected demand is ${projectedUnits} units, but current specialized faculty capacity is only ${totalCapacity} units. Shortfall: ${unitShortage} units.`;
+
+            return (
+                '<div class="bg-rose-50 border border-rose-200 rounded-lg p-4 text-rose-900">'
+                + '  <div class="flex items-start justify-between gap-3">'
+                + '    <p class="text-sm leading-relaxed">' + escapeHtml(message) + '</p>'
+                + '    <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">Recommended Action: ' + escapeHtml(recommendedAction) + '</span>'
+                + '  </div>'
+                + '</div>'
+            );
+        }).join('');
+
+        container.innerHTML = cards;
+    };
+
+    setStatus('Loading forecast…');
+
+    fetch('api/predict_shortages.php', { method: 'GET' })
+        .then(async (res) => {
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                const msg = data && data.message ? data.message : 'Failed to load forecast.';
+                throw new Error(msg);
+            }
+            return data;
+        })
+        .then((data) => {
+            clearStatus();
+            if (!Array.isArray(data)) {
+                const msg = (data && data.message) ? data.message : 'Unexpected response from forecast endpoint.';
+                renderError(msg);
+                return;
+            }
+
+            const shortages = data.filter((row) => row && row.hiring_required === true);
+            renderShortages(shortages);
+        })
+        .catch((err) => {
+            clearStatus();
+            renderError(err && err.message ? err.message : 'Unable to load forecast data.');
+        });
+}
 
 // --------------------------------------------------
 // Dashboard - Load Assignment Report

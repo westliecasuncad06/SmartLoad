@@ -140,6 +140,21 @@
             <p class="text-2xl font-bold text-indigo-600 mt-1"><?= $utilization ?>%</p>
         </div>
     </div>
+
+    <!-- Predictive HR Insights -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-900">Forecasted Faculty Shortages (2027)</h3>
+                <p class="text-sm text-slate-500 mt-0.5">Based on historical sections offered and current specialized capacity</p>
+            </div>
+        </div>
+        <div class="p-6">
+            <div id="predictiveHrInsights" class="space-y-3">
+                <div class="text-sm text-slate-500" id="predictiveHrInsightsStatus">Loading forecast…</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- ============================================================ -->
