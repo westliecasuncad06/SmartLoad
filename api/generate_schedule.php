@@ -3,33 +3,9 @@
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/GeminiAPI.php';
 
-/**
- * Placeholder scoring: counts how many teacher expertise tags appear
- * in the subject program or prerequisites text, producing a 0–100 score.
- * Replace with GeminiEvaluator::scoreExpertise() when the API key is available.
- */
-function calculateMatchScore(string $expertiseTags, string $program, string $prerequisites): array
-{
-    if ($expertiseTags === '') {
-        return ['score' => 0, 'rationale' => 'Teacher has no expertise tags.'];
-    }
-
-    $tags = array_map('trim', explode(',', strtolower($expertiseTags)));
-    $haystack = strtolower($program . ' ' . $prerequisites);
-
-    $matches = 0;
-    foreach ($tags as $tag) {
-        if ($tag !== '' && strpos($haystack, $tag) !== false) {
-            $matches++;
-        }
-    }
-
-    $score = count($tags) > 0 ? (int) round(($matches / count($tags)) * 100) : 0;
-    $rationale = "Matched {$matches} of " . count($tags) . " expertise tags against the subject program and prerequisites.";
-
-    return ['score' => $score, 'rationale' => $rationale];
-}
+$ai = new GeminiEvaluator(GEMINI_API_KEY);
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -81,16 +57,18 @@ try {
         $bestRationale = '';
 
         foreach ($eligibleTeachers as $teacher) {
-            $result = calculateMatchScore(
+            $aiResult = $ai->scoreExpertise(
                 $teacher['expertise_tags'] ?? '',
-                $subject['program'],
                 $subject['prerequisites'] ?? ''
             );
 
-            if ($result['score'] > $bestScore) {
-                $bestScore     = $result['score'];
+            $score     = (int) $aiResult['score'];
+            $rationale = (string) $aiResult['rationale'];
+
+            if ($score > $bestScore) {
+                $bestScore     = $score;
                 $bestTeacher   = $teacher;
-                $bestRationale = $result['rationale'];
+                $bestRationale = $rationale;
             }
         }
 

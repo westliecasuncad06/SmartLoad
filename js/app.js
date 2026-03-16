@@ -45,12 +45,16 @@ function switchPage(pageName) {
 // --------------------------------------------------
 // Modal Controls
 // --------------------------------------------------
-function openModal() {
+let currentAssignmentId = null;
+
+function openModal(assignmentId) {
+    currentAssignmentId = assignmentId || null;
     document.getElementById('overrideModal').classList.remove('hidden');
 }
 
 function closeModal() {
     document.getElementById('overrideModal').classList.add('hidden');
+    currentAssignmentId = null;
 }
 
 function openSettingsModal() {
@@ -113,7 +117,9 @@ function initFileUploads() {
         zone.addEventListener('drop', (e) => {
             e.preventDefault();
             zone.classList.remove('drag-over');
-            handleFile(type, e.dataTransfer.files[0]);
+            if (e.dataTransfer.files.length) {
+                handleFile(type, e.dataTransfer.files[0]);
+            }
         });
 
         input.addEventListener('change', (e) => {
@@ -125,21 +131,57 @@ function initFileUploads() {
 }
 
 function handleFile(type, file) {
-    if (file) {
-        const zone = document.getElementById(type + 'Upload');
-        const fileInfo = document.getElementById(type + 'FileInfo');
-        const fileName = document.getElementById(type + 'FileName');
-        const status = document.getElementById(type + 'Status');
+    if (!file) return;
 
-        zone.classList.add('uploaded');
-        fileInfo.classList.remove('hidden');
-        fileName.textContent = file.name;
-        status.classList.remove('bg-slate-300');
-        status.classList.add('bg-green-500');
+    const zone = document.getElementById(type + 'Upload');
+    const fileInfo = document.getElementById(type + 'FileInfo');
+    const fileName = document.getElementById(type + 'FileName');
+    const status = document.getElementById(type + 'Status');
 
-        uploadedFiles[type] = true;
-        updateUploadSummary();
+    // Show file info in UI immediately
+    fileInfo.classList.remove('hidden');
+    fileName.textContent = file.name;
+
+    // Upload to backend
+    uploadFile(file, type)
+        .then(() => {
+            zone.classList.add('uploaded');
+            status.classList.remove('bg-slate-300');
+            status.classList.add('bg-green-500');
+            uploadedFiles[type] = true;
+            updateUploadSummary();
+        })
+        .catch(err => {
+            // Revert UI on failure
+            fileInfo.classList.add('hidden');
+            alert('Upload failed for ' + type + ': ' + err.message);
+        });
+}
+
+/**
+ * Uploads a file to api/upload.php via FormData.
+ * @param {File} file - The file to upload.
+ * @param {string} type - One of 'teacher', 'subject', 'schedule'.
+ * @returns {Promise<object>} The parsed JSON response.
+ */
+async function uploadFile(file, type) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+
+    const response = await fetch('api/upload.php', {
+        method: 'POST',
+        body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || data.status !== 'success') {
+        throw new Error(data.message || 'Upload failed.');
     }
+
+    alert(type.charAt(0).toUpperCase() + type.slice(1) + ' file uploaded successfully! ' + data.rows_inserted + ' rows inserted.');
+    return data;
 }
 
 function removeFile(type) {
@@ -165,9 +207,9 @@ function updateUploadSummary() {
 }
 
 // --------------------------------------------------
-// Generate Schedule Simulation
+// Generate Schedule (real API call)
 // --------------------------------------------------
-function generateSchedule() {
+async function generateSchedule() {
     const btn = document.getElementById('generateBtn');
     const indicator = document.getElementById('generatingIndicator');
 
@@ -176,16 +218,92 @@ function generateSchedule() {
     indicator.classList.remove('hidden');
     indicator.classList.add('flex');
 
-    // Simulate generation time
-    setTimeout(() => {
+    try {
+        const response = await fetch('api/generate_schedule.php', {
+            method: 'POST',
+        });
+
+        const data = await response.json();
+
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Schedule';
         indicator.classList.add('hidden');
         indicator.classList.remove('flex');
 
-        // Show success message (in real app, would update the table via AJAX)
-        alert('Schedule generated successfully!\n\n• 156 subjects assigned\n• 42 teachers matched\n• 0 conflicts detected\n• Generation time: 2.3 seconds');
-    }, 2500);
+        if (!response.ok || data.status !== 'success') {
+            alert('Error: ' + (data.message || 'Schedule generation failed.'));
+            return;
+        }
+
+        alert(
+            'Schedule generated successfully!\n\n' +
+            '• ' + data.assigned_count + ' subjects assigned\n' +
+            '• ' + data.unassigned_count + ' subjects unassigned'
+        );
+
+        // Reload to reflect new data in the tables
+        location.reload();
+
+    } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Schedule';
+        indicator.classList.add('hidden');
+        indicator.classList.remove('flex');
+
+        alert('Network error: ' + err.message);
+    }
+}
+
+// --------------------------------------------------
+// Manual Override (real API call)
+// --------------------------------------------------
+async function submitOverride(assignmentId) {
+    const newTeacherSelect = document.getElementById('overrideTeacherSelect');
+    const reasonTextarea = document.getElementById('overrideReason');
+
+    const newTeacherId = newTeacherSelect ? newTeacherSelect.value : '';
+    const reason = reasonTextarea ? reasonTextarea.value.trim() : '';
+
+    if (!newTeacherId) {
+        alert('Please select a teacher to reassign to.');
+        return;
+    }
+    if (!reason) {
+        alert('Please provide a reason for the override.');
+        return;
+    }
+
+    const id = assignmentId || currentAssignmentId;
+    if (!id) {
+        alert('No assignment selected for override.');
+        return;
+    }
+
+    try {
+        const response = await fetch('api/override.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                assignment_id: Number(id),
+                new_teacher_id: Number(newTeacherId),
+                reason: reason,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.status !== 'success') {
+            alert('Override failed: ' + (data.message || 'Unknown error.'));
+            return;
+        }
+
+        alert('Override saved successfully!');
+        closeModal();
+        location.reload();
+
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
 }
 
 // --------------------------------------------------

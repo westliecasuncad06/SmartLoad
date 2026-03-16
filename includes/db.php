@@ -8,6 +8,9 @@ $dbname = 'smartload';
 $username = 'root';
 $password = '';
 
+// Gemini AI API Key (replace with your actual key)
+define('GEMINI_API_KEY', 'YOUR_GEMINI_API_KEY_HERE');
+
 try {
     $pdo = new PDO(
         "mysql:host=$host;dbname=$dbname;charset=utf8mb4",
