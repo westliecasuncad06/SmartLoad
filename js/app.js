@@ -1976,6 +1976,92 @@ function getTeacherFromDataset(el) {
     };
 }
 
+function teacherAvailabilityDays() {
+    return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+}
+
+function dayKey(day) {
+    return String(day || '').replace(/\s+/g, '');
+}
+
+function resetTeacherAvailability(prefix) {
+    teacherAvailabilityDays().forEach(day => {
+        const k = dayKey(day);
+        const enabled = document.getElementById(prefix + 'TeacherAvail' + k + 'Enabled');
+        const start = document.getElementById(prefix + 'TeacherAvail' + k + 'Start');
+        const end = document.getElementById(prefix + 'TeacherAvail' + k + 'End');
+        if (enabled) enabled.checked = false;
+        if (start) start.value = '';
+        if (end) end.value = '';
+    });
+}
+
+function collectTeacherAvailability(prefix) {
+    const rows = [];
+    for (const day of teacherAvailabilityDays()) {
+        const k = dayKey(day);
+        const enabledEl = document.getElementById(prefix + 'TeacherAvail' + k + 'Enabled');
+        const startEl = document.getElementById(prefix + 'TeacherAvail' + k + 'Start');
+        const endEl = document.getElementById(prefix + 'TeacherAvail' + k + 'End');
+
+        const enabled = !!(enabledEl && enabledEl.checked);
+        const start = startEl ? String(startEl.value || '').trim() : '';
+        const end = endEl ? String(endEl.value || '').trim() : '';
+
+        if (!enabled) continue;
+
+        if (!start || !end) {
+            throw new Error('Please set start and end time for ' + day + '.');
+        }
+
+        // Time inputs are HH:MM. Simple string compare works.
+        if (start >= end) {
+            throw new Error('End time must be after start time for ' + day + '.');
+        }
+
+        rows.push({ day_of_week: day, start_time: start, end_time: end });
+    }
+    return rows;
+}
+
+function setTeacherAvailability(prefix, availabilityRows) {
+    resetTeacherAvailability(prefix);
+    const byDay = {};
+    (Array.isArray(availabilityRows) ? availabilityRows : []).forEach(r => {
+        const day = String(r.day_of_week || '').trim();
+        if (!day) return;
+        // Only support one range per day in the UI.
+        if (byDay[day]) return;
+        byDay[day] = {
+            start_time: String(r.start_time || '').slice(0, 5),
+            end_time: String(r.end_time || '').slice(0, 5),
+        };
+    });
+
+    teacherAvailabilityDays().forEach(day => {
+        const v = byDay[day];
+        const k = dayKey(day);
+        const enabled = document.getElementById(prefix + 'TeacherAvail' + k + 'Enabled');
+        const start = document.getElementById(prefix + 'TeacherAvail' + k + 'Start');
+        const end = document.getElementById(prefix + 'TeacherAvail' + k + 'End');
+        if (!v) return;
+        if (enabled) enabled.checked = true;
+        if (start) start.value = v.start_time || '';
+        if (end) end.value = v.end_time || '';
+    });
+}
+
+async function fetchTeacherAvailability(teacherId) {
+    const id = Number(teacherId || 0);
+    if (!id) return [];
+    const res = await fetch('api/get_teacher_availability.php?teacher_id=' + encodeURIComponent(String(id)));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data || data.status !== 'success') {
+        throw new Error((data && data.message) ? data.message : 'Failed to load availability.');
+    }
+    return Array.isArray(data.availability) ? data.availability : [];
+}
+
 async function postJson(url, payload) {
     const response = await fetch(url, {
         method: 'POST',
@@ -2043,6 +2129,7 @@ function initTeachersPage() {
         btnAdd.addEventListener('click', () => {
             const form = document.getElementById('teacherAddForm');
             if (form) form.reset();
+            resetTeacherAvailability('add');
             openTeacherModal('teacherAddModal');
         });
     }
@@ -2056,12 +2143,21 @@ function initTeachersPage() {
     if (addForm) {
         addForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            let availability = [];
+            try {
+                availability = collectTeacherAvailability('add');
+            } catch (err) {
+                alert((err && err.message) ? err.message : String(err));
+                return;
+            }
+
             const payload = {
                 name: (document.getElementById('addTeacherName') || {}).value || '',
                 email: (document.getElementById('addTeacherEmail') || {}).value || '',
                 type: (document.getElementById('addTeacherType') || {}).value || 'Full-time',
                 max_units: Number((document.getElementById('addTeacherMaxUnits') || {}).value || 0),
                 expertise_tags: (document.getElementById('addTeacherExpertise') || {}).value || '',
+                availability,
             };
 
             if (!payload.name.trim() || !payload.email.trim()) {
@@ -2117,7 +2213,7 @@ function initTeachersPage() {
     });
 
     document.querySelectorAll('.teacher-action-edit').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const t = getTeacherFromDataset(btn);
             const idEl = document.getElementById('editTeacherId');
             const nameEl = document.getElementById('editTeacherName');
@@ -2131,7 +2227,18 @@ function initTeachersPage() {
             if (typeEl) typeEl.value = t.type || 'Full-time';
             if (maxEl) maxEl.value = String(t.max_units || 0);
             if (expEl) expEl.value = t.expertise_tags || '';
+
+            // Default availability to empty, then fetch and populate.
+            resetTeacherAvailability('edit');
             openTeacherModal('teacherEditModal');
+
+            try {
+                const rows = await fetchTeacherAvailability(t.id);
+                setTeacherAvailability('edit', rows);
+            } catch (err) {
+                // Don't block editing if availability can't be loaded.
+                console.warn(err);
+            }
         });
     });
 
@@ -2145,6 +2252,14 @@ function initTeachersPage() {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            let availability = [];
+            try {
+                availability = collectTeacherAvailability('edit');
+            } catch (err) {
+                alert((err && err.message) ? err.message : String(err));
+                return;
+            }
+
             const payload = {
                 id: Number((document.getElementById('editTeacherId') || {}).value || 0),
                 name: (document.getElementById('editTeacherName') || {}).value || '',
@@ -2152,6 +2267,7 @@ function initTeachersPage() {
                 type: (document.getElementById('editTeacherType') || {}).value || 'Full-time',
                 max_units: Number((document.getElementById('editTeacherMaxUnits') || {}).value || 0),
                 expertise_tags: (document.getElementById('editTeacherExpertise') || {}).value || '',
+                availability,
             };
 
             if (!payload.id || !payload.name.trim() || !payload.email.trim()) {

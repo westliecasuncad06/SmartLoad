@@ -206,6 +206,34 @@
                         <label class="block text-sm text-slate-600 mb-1">Expertise Tags (comma separated)</label>
                         <input id="addTeacherExpertise" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. PHP, MySQL, Web Dev" />
                     </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm text-slate-600 mb-2">Availability (Monday to Saturday)</label>
+                        <div class="border border-slate-200 rounded-lg overflow-hidden">
+                            <div class="grid grid-cols-12 bg-slate-50 text-xs text-slate-600 font-semibold">
+                                <div class="col-span-4 px-3 py-2">Day</div>
+                                <div class="col-span-2 px-3 py-2">Available</div>
+                                <div class="col-span-3 px-3 py-2">Start</div>
+                                <div class="col-span-3 px-3 py-2">End</div>
+                            </div>
+
+                            <?php foreach (['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as $d): $k = preg_replace('/\s+/', '', $d); ?>
+                                <div class="grid grid-cols-12 items-center border-t border-slate-200">
+                                    <div class="col-span-4 px-3 py-2 text-sm text-slate-700"><?php echo htmlspecialchars($d); ?></div>
+                                    <div class="col-span-2 px-3 py-2">
+                                        <input id="addTeacherAvail<?php echo $k; ?>Enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                                    </div>
+                                    <div class="col-span-3 px-3 py-2">
+                                        <input id="addTeacherAvail<?php echo $k; ?>Start" type="time" class="w-full px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    </div>
+                                    <div class="col-span-3 px-3 py-2">
+                                        <input id="addTeacherAvail<?php echo $k; ?>End" type="time" class="w-full px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">Check the day, then set start and end time.</p>
+                    </div>
                 </div>
                 <div class="flex items-center justify-end gap-2 pt-2">
                     <button type="button" id="btnTeacherAddCancel" class="px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm">Cancel</button>
@@ -288,6 +316,34 @@
                     <div class="md:col-span-2">
                         <label class="block text-sm text-slate-600 mb-1">Expertise Tags (comma separated)</label>
                         <input id="editTeacherExpertise" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm text-slate-600 mb-2">Availability (Monday to Saturday)</label>
+                        <div class="border border-slate-200 rounded-lg overflow-hidden">
+                            <div class="grid grid-cols-12 bg-slate-50 text-xs text-slate-600 font-semibold">
+                                <div class="col-span-4 px-3 py-2">Day</div>
+                                <div class="col-span-2 px-3 py-2">Available</div>
+                                <div class="col-span-3 px-3 py-2">Start</div>
+                                <div class="col-span-3 px-3 py-2">End</div>
+                            </div>
+
+                            <?php foreach (['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as $d): $k = preg_replace('/\s+/', '', $d); ?>
+                                <div class="grid grid-cols-12 items-center border-t border-slate-200">
+                                    <div class="col-span-4 px-3 py-2 text-sm text-slate-700"><?php echo htmlspecialchars($d); ?></div>
+                                    <div class="col-span-2 px-3 py-2">
+                                        <input id="editTeacherAvail<?php echo $k; ?>Enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                                    </div>
+                                    <div class="col-span-3 px-3 py-2">
+                                        <input id="editTeacherAvail<?php echo $k; ?>Start" type="time" class="w-full px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    </div>
+                                    <div class="col-span-3 px-3 py-2">
+                                        <input id="editTeacherAvail<?php echo $k; ?>End" type="time" class="w-full px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">Check the day, then set start and end time.</p>
                     </div>
                 </div>
                 <div class="flex items-center justify-end gap-2 pt-2">

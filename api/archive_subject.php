@@ -10,6 +10,24 @@ function json_response(int $statusCode, array $payload): void {
     exit;
 }
 
+function ensure_subject_archiving_enabled(PDO $pdo): void {
+    $hasArchive = false;
+    try {
+        $colStmt = $pdo->query("SHOW COLUMNS FROM subjects LIKE 'is_archived'");
+        $hasArchive = (bool) $colStmt->fetch();
+    } catch (Exception $ignore) {
+        $hasArchive = false;
+    }
+
+    if ($hasArchive) {
+        return;
+    }
+
+    // Self-heal: add archive column if missing.
+    // If the DB user lacks ALTER privilege, this will throw and be reported.
+    $pdo->exec('ALTER TABLE subjects ADD COLUMN is_archived TINYINT(1) NOT NULL DEFAULT 0');
+}
+
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         json_response(405, ['status' => 'error', 'message' => 'Method not allowed.']);
@@ -25,18 +43,8 @@ try {
         json_response(400, ['status' => 'error', 'message' => 'id is required.']);
     }
 
-    // Ensure column exists (better error message if migration not applied)
-    $hasArchive = false;
-    try {
-        $colStmt = $pdo->query("SHOW COLUMNS FROM subjects LIKE 'is_archived'");
-        $hasArchive = (bool)$colStmt->fetch();
-    } catch (Exception $ignore) {
-        $hasArchive = false;
-    }
-
-    if (!$hasArchive) {
-        json_response(500, ['status' => 'error', 'message' => 'Archiving is not enabled. Please run: ALTER TABLE subjects ADD COLUMN is_archived TINYINT DEFAULT 0;']);
-    }
+    // Ensure archiving is enabled (auto-migrate if needed)
+    ensure_subject_archiving_enabled($pdo);
 
     $stmtCode = $pdo->prepare('SELECT course_code FROM subjects WHERE id = ?');
     $stmtCode->execute([$id]);
@@ -59,7 +67,7 @@ try {
     $audit = $pdo->prepare('INSERT INTO audit_logs (action_type, description, user) VALUES (?, ?, ?)');
     $audit->execute([
         'Subject Archived',
-        'Subject archived',
+        $courseCode . ' archived from subject catalog',
         'Program Chair',
     ]);
 
