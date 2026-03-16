@@ -29,6 +29,40 @@
     animation: pulse-border 1.5s ease-in-out infinite;
 }
 
+/* Print styles (Schedules) */
+.schedule-print-only {
+    display: none;
+}
+
+@media print {
+    /* Hide app chrome */
+    #sidebar,
+    #sidebarOverlay,
+    header {
+        display: none !important;
+    }
+
+    /* Ensure content uses full width */
+    main {
+        margin-left: 0 !important;
+    }
+
+    /* Hide interactive controls in the schedule page */
+    .schedule-no-print {
+        display: none !important;
+    }
+
+    /* Show print-only header */
+    .schedule-print-only {
+        display: block !important;
+    }
+
+    /* Remove extra padding for a cleaner print */
+    #page-schedules {
+        padding: 0 !important;
+    }
+}
+
 /* Sidebar Transition */
 .sidebar-transition {
     transition: transform 0.3s ease-in-out;

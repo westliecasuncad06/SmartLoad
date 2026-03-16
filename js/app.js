@@ -353,6 +353,9 @@ document.addEventListener('DOMContentLoaded', function () {
     initTeacherFilters();
     initSubjectFilters();
 
+    // Initialize schedule filters (Schedules)
+    initScheduleFilters();
+
     // Initialize dashboard controls (filters/export/actions)
     initDashboardReport();
 
@@ -362,6 +365,283 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize Predictive HR Insights (Load Reports)
     initPredictiveHrInsights();
 });
+
+// --------------------------------------------------
+// Schedules - Filters (Teacher/Room)
+// --------------------------------------------------
+function initScheduleFilters() {
+    const page = document.getElementById('page-schedules');
+    const teacherSearchEl = document.getElementById('scheduleTeacherSearch');
+    const teacherSelectEl = document.getElementById('scheduleTeacherFilter');
+    const roomSelectEl = document.getElementById('scheduleRoomFilter');
+
+    const semesterSelectEl = document.getElementById('scheduleSemesterSelect');
+    const printBtn = document.getElementById('schedulePrintBtn');
+
+    const weeklyViewEl = document.getElementById('scheduleWeeklyView');
+    const dailyViewEl = document.getElementById('scheduleDailyView');
+    const listViewEl = document.getElementById('scheduleListView');
+    const legendEl = document.getElementById('scheduleLegend');
+    const daySelectEl = document.getElementById('scheduleDayFilter');
+    const dailyListEl = document.getElementById('scheduleDailyList');
+    const listBodyEl = document.getElementById('scheduleListBody');
+
+    const btnWeekly = document.getElementById('scheduleViewWeekly');
+    const btnDaily = document.getElementById('scheduleViewDaily');
+    const btnList = document.getElementById('scheduleViewList');
+
+    const printSemesterEl = document.getElementById('schedulePrintSemester');
+    const printFiltersEl = document.getElementById('schedulePrintFilters');
+
+    if (!page || (!teacherSearchEl && !teacherSelectEl && !roomSelectEl)) return;
+
+    const isAll = (value, prefix) => {
+        const v = String(value || '').trim().toLowerCase();
+        if (!v) return true;
+        if (v === 'all') return true;
+        if (prefix && v === prefix.toLowerCase()) return true;
+        if (v.startsWith('all ')) return true;
+        return false;
+    };
+
+    const normalize = (value) => String(value || '').trim().toLowerCase();
+
+    const getActiveTeacherRoomFilters = () => {
+        const teacherValue = teacherSelectEl ? teacherSelectEl.value : 'All Teachers';
+        const roomValue = roomSelectEl ? roomSelectEl.value : 'All Rooms';
+
+        const teacherFilter = isAll(teacherValue, 'All Teachers') ? '' : normalize(teacherValue);
+        const roomFilter = isAll(roomValue, 'All Rooms') ? '' : normalize(roomValue);
+
+        return { teacherFilter, roomFilter, teacherValue, roomValue };
+    };
+
+    const scheduleEntries = () => {
+        const cards = Array.from(page.querySelectorAll('.schedule-class-card'));
+        return cards.map(card => {
+            return {
+                card,
+                teacher: String(card.dataset.teacher || '').trim(),
+                room: String(card.dataset.room || '').trim(),
+                day: String(card.dataset.day || '').trim(),
+                time: String(card.dataset.time || '').trim(),
+                course: String(card.dataset.course || '').trim(),
+                subject: String(card.dataset.subject || '').trim(),
+            };
+        });
+    };
+
+    const matchesCurrentFilters = (entry) => {
+        const { teacherFilter, roomFilter } = getActiveTeacherRoomFilters();
+        const t = normalize(entry.teacher);
+        const r = normalize(entry.room);
+
+        const matchesTeacher = !teacherFilter || t === teacherFilter;
+        const matchesRoom = !roomFilter || r === roomFilter;
+        return matchesTeacher && matchesRoom;
+    };
+
+    const applyFilters = () => {
+        const { teacherFilter, roomFilter } = getActiveTeacherRoomFilters();
+        page.querySelectorAll('.schedule-class-card').forEach(card => {
+            const cardTeacher = normalize(card.dataset.teacher || '');
+            const cardRoom = normalize(card.dataset.room || '');
+
+            const matchesTeacher = !teacherFilter || cardTeacher === teacherFilter;
+            const matchesRoom = !roomFilter || cardRoom === roomFilter;
+            const visible = matchesTeacher && matchesRoom;
+
+            card.classList.toggle('hidden', !visible);
+        });
+
+        // Keep derived views in sync
+        rebuildDerivedViews();
+        syncPrintHeader();
+    };
+
+    const filterTeacherOptions = () => {
+        if (!teacherSearchEl || !teacherSelectEl) return;
+        const q = normalize(teacherSearchEl.value);
+
+        const options = Array.from(teacherSelectEl.options);
+        options.forEach((opt, idx) => {
+            if (idx === 0) {
+                opt.hidden = false; // All Teachers
+                return;
+            }
+            if (!q) {
+                opt.hidden = false;
+                return;
+            }
+            opt.hidden = normalize(opt.value).indexOf(q) === -1;
+        });
+    };
+
+    const filterTeacherOptionsDebounced = debounce(filterTeacherOptions, 120);
+    if (teacherSearchEl) teacherSearchEl.addEventListener('keyup', filterTeacherOptionsDebounced);
+    if (teacherSelectEl) teacherSelectEl.addEventListener('change', applyFilters);
+    if (roomSelectEl) roomSelectEl.addEventListener('change', applyFilters);
+
+    // ---------------------------
+    // View switching (Weekly/Daily/List)
+    // ---------------------------
+    const VIEW_KEY = 'smartload.schedule.view';
+    const SEM_KEY = 'smartload.schedule.semester';
+
+    const setActiveButton = (activeBtn) => {
+        [btnWeekly, btnDaily, btnList].filter(Boolean).forEach(btn => {
+            const isActive = btn === activeBtn;
+            btn.classList.toggle('bg-white', isActive);
+            btn.classList.toggle('text-slate-900', isActive);
+            btn.classList.toggle('shadow-sm', isActive);
+            btn.classList.toggle('text-slate-600', !isActive);
+        });
+    };
+
+    const showView = (view) => {
+        const v = String(view || 'weekly');
+        if (weeklyViewEl) weeklyViewEl.classList.toggle('hidden', v !== 'weekly');
+        if (dailyViewEl) dailyViewEl.classList.toggle('hidden', v !== 'daily');
+        if (listViewEl) listViewEl.classList.toggle('hidden', v !== 'list');
+        if (legendEl) legendEl.classList.toggle('hidden', v !== 'weekly');
+
+        if (v === 'weekly') setActiveButton(btnWeekly);
+        if (v === 'daily') setActiveButton(btnDaily);
+        if (v === 'list') setActiveButton(btnList);
+
+        try { localStorage.setItem(VIEW_KEY, v); } catch (_) {}
+
+        rebuildDerivedViews();
+        syncPrintHeader();
+    };
+
+    const rebuildDailyView = () => {
+        if (!dailyListEl) return;
+        if (!daySelectEl) {
+            dailyListEl.innerHTML = '';
+            return;
+        }
+
+        const selectedDay = String(daySelectEl.value || '').trim();
+        const entries = scheduleEntries()
+            .filter(e => e.day === selectedDay)
+            .filter(matchesCurrentFilters)
+            .sort((a, b) => a.time.localeCompare(b.time) || a.course.localeCompare(b.course));
+
+        if (!entries.length) {
+            dailyListEl.innerHTML = '<div class="text-sm text-slate-500">No classes found for this day.</div>';
+            return;
+        }
+
+        dailyListEl.innerHTML = '';
+        entries.forEach(e => {
+            const row = document.createElement('div');
+            row.className = 'flex items-start gap-3';
+
+            const time = document.createElement('div');
+            time.className = 'w-24 shrink-0 text-slate-500 text-xs font-medium pt-1';
+            time.textContent = e.time || '—';
+
+            const cardClone = e.card.cloneNode(true);
+            cardClone.classList.remove('hidden');
+
+            row.appendChild(time);
+            row.appendChild(cardClone);
+            dailyListEl.appendChild(row);
+        });
+    };
+
+    const rebuildListView = () => {
+        if (!listBodyEl) return;
+        const entries = scheduleEntries()
+            .filter(matchesCurrentFilters)
+            .sort((a, b) => a.day.localeCompare(b.day) || a.time.localeCompare(b.time) || a.course.localeCompare(b.course));
+
+        if (!entries.length) {
+            listBodyEl.innerHTML = '<tr><td class="px-4 py-4 text-slate-500" colspan="6">No classes found.</td></tr>';
+            return;
+        }
+
+        listBodyEl.innerHTML = entries.map(e => {
+            return `
+<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+  <td class="px-4 py-3 text-slate-700">${escapeHtml(e.day || '—')}</td>
+  <td class="px-4 py-3 text-slate-600">${escapeHtml(e.time || '—')}</td>
+  <td class="px-4 py-3 font-medium text-indigo-600">${escapeHtml(e.course || '—')}</td>
+  <td class="px-4 py-3 text-slate-700">${escapeHtml(e.subject || '—')}</td>
+  <td class="px-4 py-3 text-slate-700">${escapeHtml(e.teacher || 'Unassigned')}</td>
+  <td class="px-4 py-3 text-slate-600">${escapeHtml(e.room || '—')}</td>
+</tr>`;
+        }).join('');
+    };
+
+    function rebuildDerivedViews() {
+        const view = (function () {
+            try { return localStorage.getItem(VIEW_KEY) || 'weekly'; } catch (_) { return 'weekly'; }
+        })();
+
+        if (view === 'daily') rebuildDailyView();
+        if (view === 'list') rebuildListView();
+    }
+
+    function syncPrintHeader() {
+        if (!printSemesterEl && !printFiltersEl) return;
+
+        const semester = semesterSelectEl ? String(semesterSelectEl.value || '').trim() : '';
+        if (printSemesterEl) {
+            printSemesterEl.textContent = semester ? semester : '';
+        }
+
+        if (printFiltersEl) {
+            const { teacherValue, roomValue } = getActiveTeacherRoomFilters();
+            const t = String(teacherValue || 'All Teachers');
+            const r = String(roomValue || 'All Rooms');
+            printFiltersEl.innerHTML = `${escapeHtml(t)}<br/>${escapeHtml(r)}`;
+        }
+    }
+
+    if (btnWeekly) btnWeekly.addEventListener('click', () => showView('weekly'));
+    if (btnDaily) btnDaily.addEventListener('click', () => showView('daily'));
+    if (btnList) btnList.addEventListener('click', () => showView('list'));
+    if (daySelectEl) daySelectEl.addEventListener('change', () => { rebuildDailyView(); syncPrintHeader(); });
+
+    // ---------------------------
+    // Semester persistence
+    // ---------------------------
+    if (semesterSelectEl) {
+        try {
+            const saved = localStorage.getItem(SEM_KEY);
+            if (saved) semesterSelectEl.value = saved;
+        } catch (_) {}
+
+        semesterSelectEl.addEventListener('change', () => {
+            try { localStorage.setItem(SEM_KEY, String(semesterSelectEl.value || '')); } catch (_) {}
+            syncPrintHeader();
+        });
+    }
+
+    // ---------------------------
+    // Print schedule
+    // ---------------------------
+    if (printBtn) {
+        printBtn.addEventListener('click', () => {
+            rebuildDerivedViews();
+            syncPrintHeader();
+            window.print();
+        });
+    }
+
+    // Initial state
+    filterTeacherOptions();
+    // Restore saved view
+    let initialView = 'weekly';
+    try { initialView = localStorage.getItem(VIEW_KEY) || 'weekly'; } catch (_) {}
+    if (!['weekly', 'daily', 'list'].includes(initialView)) initialView = 'weekly';
+
+    applyFilters();
+    showView(initialView);
+    syncPrintHeader();
+}
 
 // --------------------------------------------------
 // Load Reports - Predictive HR Insights
