@@ -181,7 +181,7 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=<?php echo time(); ?>">
 </head>
 <body class="bg-slate-50">
     <div class="flex h-screen">
@@ -263,29 +263,30 @@ try {
             <!-- TOP NAVBAR -->
             <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
                 <div class="flex items-center justify-between px-6 py-4">
-                    <div class="flex items-center gap-4">
-                        <div class="text-sm text-slate-500">
-                            <span class="text-slate-400">SmartLoad</span>
-                            <i class="fas fa-chevron-right text-xs mx-2"></i>
-                            <span id="breadcrumbTitle" class="text-slate-700 font-medium">Dashboard</span>
-                        </div>
-                    </div>
+
 
                     <div class="flex-1 max-w-lg mx-8">
                         <div class="relative">
                             <input type="text" id="globalSearch" placeholder="Search teachers, subjects, schedules..." class="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                             <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
                             <kbd class="absolute right-3 top-2 px-2 py-0.5 text-xs bg-slate-100 text-slate-500 rounded">Ctrl+K</kbd>
+                            <!-- Search Results Dropdown -->
+                            <div id="searchResultsDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-30 hidden max-h-96 overflow-y-auto">
+                                <div id="searchLoading" class="px-4 py-3 text-sm text-slate-500 hidden">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>Searching...
+                                </div>
+                                <div id="searchNoResults" class="px-4 py-6 text-center text-sm text-slate-500 hidden">
+                                    <i class="fas fa-search text-2xl mb-2 block opacity-50"></i>
+                                    No results found
+                                </div>
+                                <div id="searchResultsList" class="divide-y divide-slate-100"></div>
+                            </div>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-4">
                         <button onclick="openSettingsModal()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="Settings">
                             <i class="fas fa-cog"></i>
-                        </button>
-                        <button class="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
-                            <i class="fas fa-bell"></i>
-                            <span class="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">3</span>
                         </button>
                         <div class="flex items-center gap-3 pl-4 border-l border-slate-200">
                             <div class="w-9 h-9 bg-gradient-to-br from-indigo-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
