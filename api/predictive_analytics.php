@@ -228,17 +228,33 @@ function updateHistoricalAnalytics() {
             ];
         }
         
-        // Update analytics metadata
-        $stmt = $pdo->query("
-            SELECT 
-                academic_year,
-                COUNT(DISTINCT IF(semester IS NOT NULL, CONCAT(academic_year, semester), NULL)) as period_count
-            FROM historical_teachers
-            GROUP BY academic_year
-            ORDER BY academic_year DESC
-            LIMIT 1
-        ");
-        $latestYear = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Backfill historical_schedules.subject_code when missing.
+        // Many historical schedule CSVs only contain subject_id; we map it via historical_subjects.id per AY/Sem.
+        $updatedScheduleCodes = 0;
+        try {
+            $upd = $pdo->prepare(
+                'UPDATE historical_schedules hs '
+                . 'JOIN historical_subjects hsub '
+                . '  ON hsub.academic_year = hs.academic_year '
+                . ' AND hsub.semester = hs.semester '
+                . ' AND hsub.id = hs.subject_id '
+                . 'SET hs.subject_code = hsub.course_code '
+                . 'WHERE (hs.subject_code IS NULL OR hs.subject_code = "")'
+            );
+            $upd->execute();
+            $updatedScheduleCodes = (int) $upd->rowCount();
+        } catch (Exception $ignore) {
+            $updatedScheduleCodes = 0;
+        }
+
+        // Find latest academic year available (best-effort)
+        $latestYear = null;
+        try {
+            $stmt = $pdo->query('SELECT academic_year FROM historical_subjects ORDER BY academic_year DESC LIMIT 1');
+            $latestYear = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $ignore) {
+            $latestYear = null;
+        }
         
         // Log analytics refresh
         $insertAudit = $pdo->prepare(
@@ -247,10 +263,11 @@ function updateHistoricalAnalytics() {
         $insertAudit->execute([
             'Analytics Update',
             sprintf(
-                'Predictive analytics refreshed: %d teachers, %d subjects, %d schedules from historical data',
+                'Predictive analytics refreshed: %d teachers, %d subjects, %d schedules from historical data (%d schedule codes backfilled)',
                 $teacherCount,
                 $subjectCount,
-                $scheduleCount
+                $scheduleCount,
+                $updatedScheduleCodes
             ),
             'Program Chair'
         ]);
@@ -263,6 +280,7 @@ function updateHistoricalAnalytics() {
                 'teachers' => $teacherCount,
                 'subjects' => $subjectCount,
                 'schedules' => $scheduleCount,
+                'schedule_codes_backfilled' => $updatedScheduleCodes,
                 'latest_academic_year' => $latestYear['academic_year'] ?? 'N/A'
             ]
         ];

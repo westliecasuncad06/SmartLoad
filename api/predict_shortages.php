@@ -58,28 +58,58 @@ try {
         json_response(405, ['status' => 'error', 'message' => 'Method not allowed.']);
     }
 
-    if (!table_exists($pdo, 'historical_demand')) {
+    // Demand source:
+    // - Prefer historical_demand if present (explicit curated table).
+    // - Otherwise derive from historical_schedules by counting distinct sections per subject per academic_year.
+    $hasDemandTable = table_exists($pdo, 'historical_demand');
+    $hasHistoricalSchedules = table_exists($pdo, 'historical_schedules');
+
+    if (!$hasDemandTable && !$hasHistoricalSchedules) {
         json_response(500, [
             'status' => 'error',
-            'message' => 'Missing required table: historical_demand.',
+            'message' => 'Missing required tables: historical_demand or historical_schedules.',
         ]);
     }
 
-    // Expected historical_demand columns (assumed): subject_id, academic_year, sections_offered
-    // Join to subjects to read subject_name, program, and units.
-    $demandRows = $pdo->query(
-        'SELECT
-            s.id AS subject_id,
-            s.name AS subject_name,
-            s.program,
-            s.units,
-            hd.academic_year,
-            hd.sections_offered
-         FROM historical_demand hd
-         JOIN subjects s ON s.id = hd.subject_id
-         WHERE s.is_archived = 0
-         ORDER BY s.id ASC, hd.academic_year ASC'
-    )->fetchAll(PDO::FETCH_ASSOC);
+    if ($hasDemandTable) {
+        // Expected historical_demand columns: subject_id, academic_year, sections_offered
+        $demandRows = $pdo->query(
+            'SELECT
+                s.id AS subject_id,
+                s.name AS subject_name,
+                s.program,
+                s.units,
+                hd.academic_year,
+                hd.sections_offered
+             FROM historical_demand hd
+             JOIN subjects s ON s.id = hd.subject_id
+             WHERE s.is_archived = 0
+             ORDER BY s.id ASC, hd.academic_year ASC'
+        )->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        // Derive demand from historical_schedules.
+        // Join current subjects by course_code = subject_code.
+        // Count distinct sections; if section is missing, approximate by distinct meeting slots.
+        $demandRows = $pdo->query(
+            'SELECT
+                s.id AS subject_id,
+                s.name AS subject_name,
+                s.program,
+                s.units,
+                hs.academic_year,
+                COUNT(DISTINCT (
+                    CASE
+                        WHEN hs.section IS NULL OR hs.section = "" THEN CONCAT(hs.subject_code, "|", hs.day_of_week, "|", hs.start_time, "|", hs.end_time, "|", hs.room)
+                        ELSE hs.section
+                    END
+                )) AS sections_offered
+             FROM historical_schedules hs
+             JOIN subjects s ON s.course_code = hs.subject_code
+             WHERE s.is_archived = 0
+             GROUP BY s.id, hs.academic_year
+             ORDER BY s.id ASC, hs.academic_year ASC'
+        )->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     // If there are no historical rows, return an empty array (not an error).
     if (empty($demandRows)) {

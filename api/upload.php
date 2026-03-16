@@ -10,6 +10,16 @@ function json_response(int $statusCode, array $payload): void {
     exit;
 }
 
+class HttpException extends RuntimeException {
+    public int $statusCode;
+
+    public function __construct(int $statusCode, string $message)
+    {
+        parent::__construct($message);
+        $this->statusCode = $statusCode;
+    }
+}
+
 /**
  * Import historical teachers from CSV file into historical_teachers table
  */
@@ -108,11 +118,42 @@ function importHistoricalSchedulesFromFile($filepath, $academicYear, $semester, 
     try {
         if (($handle = fopen($filepath, 'r')) !== false) {
             $headers = fgetcsv($handle);
+
+            // Many historical schedule CSVs only contain a numeric subject_id.
+            // When subject_code/course_code is missing, map subject_id (1-based) to the ordered list
+            // of historical_subjects for the same AY/Sem.
+            $subjectCodeByIndex = [];
+            try {
+                $stmtMap = $pdo->prepare(
+                    'SELECT course_code FROM historical_subjects WHERE academic_year = :year AND semester = :semester ORDER BY id ASC'
+                );
+                $stmtMap->execute([
+                    ':year' => $academicYear,
+                    ':semester' => $semester . ' Semester',
+                ]);
+
+                $i = 1;
+                foreach ($stmtMap->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                    $code = trim((string)($r['course_code'] ?? ''));
+                    if ($code !== '') {
+                        $subjectCodeByIndex[$i] = $code;
+                    }
+                    $i++;
+                }
+            } catch (Exception $ignore) {
+                $subjectCodeByIndex = [];
+            }
             
             while (($row = fgetcsv($handle)) !== false) {
                 if (empty($row[0])) continue;
                 
                 $data = array_combine($headers, $row);
+
+                $subjectId = (int)($data['subject_id'] ?? 0);
+                $subjectCode = trim((string)($data['subject_code'] ?? $data['course_code'] ?? ''));
+                if ($subjectCode === '' && $subjectId > 0 && isset($subjectCodeByIndex[$subjectId])) {
+                    $subjectCode = (string)$subjectCodeByIndex[$subjectId];
+                }
                 
                 $stmt = $pdo->prepare("
                     INSERT INTO historical_schedules 
@@ -128,8 +169,8 @@ function importHistoricalSchedulesFromFile($filepath, $academicYear, $semester, 
                 $stmt->execute([
                     ':year' => $academicYear,
                     ':semester' => $semester . ' Semester',
-                    ':subject_id' => (int)($data['subject_id'] ?? 0),
-                    ':code' => trim($data['subject_code'] ?? $data['course_code'] ?? ''),
+                    ':subject_id' => $subjectId,
+                    ':code' => $subjectCode,
                     ':day' => trim($data['day_of_week'] ?? ''),
                     ':start' => trim($data['start_time'] ?? ''),
                     ':end' => trim($data['end_time'] ?? ''),
@@ -560,7 +601,8 @@ try {
                 } catch (PDOException $e) {
                     $sqlState = (string)$e->getCode();
                     $mysqlErr = (isset($e->errorInfo[1]) ? (int)$e->errorInfo[1] : 0);
-                    if ($sqlState === '23000' || $sqlState === '1062' || $mysqlErr === 1062) {
+                    // Treat ONLY duplicate-key as skippable; other integrity errors (e.g. FK) must be surfaced.
+                    if ($mysqlErr === 1062) {
                         $identifier = $rec['name'] !== '' ? $rec['name'] : $rec['email'];
                         $duplicates[] = $identifier;
                         continue;
@@ -650,7 +692,8 @@ try {
                 } catch (PDOException $e) {
                     $sqlState = (string)$e->getCode();
                     $mysqlErr = (isset($e->errorInfo[1]) ? (int)$e->errorInfo[1] : 0);
-                    if ($sqlState === '23000' || $sqlState === '1062' || $mysqlErr === 1062) {
+                    // Treat ONLY duplicate-key as skippable; other integrity errors must be surfaced.
+                    if ($mysqlErr === 1062) {
                         $identifier = $rec['course_code'];
                         $duplicates[] = $identifier;
                         continue;
@@ -673,6 +716,104 @@ try {
                 $scheduleHasSection = false;
             }
 
+            // Support two schedule formats:
+            // 1) subject_id, day_of_week, start_time, end_time, room, section?
+            // 2) course_code, day_of_week, start_time, end_time, room, section?
+            // If subject_id values do not exist in current subjects table (common after repeated imports), fail with a clear message.
+            $firstKey = '';
+            foreach ($csvRows as $r0) {
+                if (is_array($r0) && isset($r0[0]) && trim((string)$r0[0]) !== '') {
+                    $firstKey = trim((string)$r0[0]);
+                    break;
+                }
+            }
+
+            $usesNumericSubjectId = ($firstKey !== '' && preg_match('/^\d+$/', $firstKey) === 1);
+
+            $courseCodeToId = [];
+            if ($usesNumericSubjectId) {
+                $subjectIds = [];
+                foreach ($csvRows as $row) {
+                    if (!is_array($row) || count($row) < 5) {
+                        continue;
+                    }
+                    $raw = trim((string)($row[0] ?? ''));
+                    if ($raw === '' || preg_match('/^\d+$/', $raw) !== 1) {
+                        continue;
+                    }
+                    $subjectIds[(int)$raw] = true;
+                }
+
+                $subjectIds = array_keys($subjectIds);
+                if (!empty($subjectIds)) {
+                    $ph = implode(',', array_fill(0, count($subjectIds), '?'));
+                    $stmtExisting = $pdo->prepare("SELECT id FROM subjects WHERE id IN ($ph)");
+                    $stmtExisting->execute($subjectIds);
+                    $found = [];
+                    foreach ($stmtExisting->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                        $found[(int)$r['id']] = true;
+                    }
+                    $missing = [];
+                    foreach ($subjectIds as $sid) {
+                        if (!isset($found[(int)$sid])) {
+                            $missing[] = (int)$sid;
+                        }
+                    }
+
+                    if (!empty($missing)) {
+                        sort($missing);
+                        $preview = array_slice($missing, 0, 12);
+                        $suffix = count($missing) > 12 ? '…' : '';
+                        throw new HttpException(
+                            400,
+                            'Schedule upload failed: the CSV references subject_id values that do not exist in the Subjects table ('
+                            . implode(', ', $preview) . $suffix
+                            . '). This usually happens when subjects were imported before and auto-increment IDs no longer start at 1. '
+                            . 'Fix: upload schedules using course_code as the first column instead of subject_id.'
+                        );
+                    }
+                }
+            } else {
+                $codes = [];
+                foreach ($csvRows as $row) {
+                    if (!is_array($row) || count($row) < 5) {
+                        continue;
+                    }
+                    $code = trim((string)($row[0] ?? ''));
+                    if ($code === '') {
+                        continue;
+                    }
+                    $codes[$code] = true;
+                }
+                $codes = array_keys($codes);
+                if (!empty($codes)) {
+                    $ph = implode(',', array_fill(0, count($codes), '?'));
+                    $stmtCodes = $pdo->prepare("SELECT id, course_code FROM subjects WHERE course_code IN ($ph)");
+                    $stmtCodes->execute($codes);
+                    foreach ($stmtCodes->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                        $courseCodeToId[(string)$r['course_code']] = (int)$r['id'];
+                    }
+
+                    $missing = [];
+                    foreach ($codes as $code) {
+                        if (!isset($courseCodeToId[$code])) {
+                            $missing[] = $code;
+                        }
+                    }
+                    if (!empty($missing)) {
+                        sort($missing);
+                        $preview = array_slice($missing, 0, 12);
+                        $suffix = count($missing) > 12 ? '…' : '';
+                        throw new HttpException(
+                            400,
+                            'Schedule upload failed: the CSV references course_code values that do not exist in the Subjects table ('
+                            . implode(', ', $preview) . $suffix
+                            . '). Upload the matching Subjects file first.'
+                        );
+                    }
+                }
+            }
+
             $stmt = $scheduleHasSection
                 ? $pdo->prepare('INSERT INTO schedules (subject_id, day_of_week, start_time, end_time, room, section) VALUES (?, ?, ?, ?, ?, ?)')
                 : $pdo->prepare('INSERT INTO schedules (subject_id, day_of_week, start_time, end_time, room) VALUES (?, ?, ?, ?, ?)');
@@ -682,8 +823,16 @@ try {
                     continue;
                 }
                 try {
+                    $subjectId = 0;
+                    if ($usesNumericSubjectId) {
+                        $subjectId = (int)$row[0];
+                    } else {
+                        $code = trim((string)($row[0] ?? ''));
+                        $subjectId = (int)($courseCodeToId[$code] ?? 0);
+                    }
+
                     $params = [
-                        (int)$row[0],
+                        $subjectId,
                         trim((string)$row[1]),
                         trim((string)$row[2]),
                         trim((string)$row[3]),
@@ -697,7 +846,8 @@ try {
                 } catch (PDOException $e) {
                     $sqlState = (string)$e->getCode();
                     $mysqlErr = (isset($e->errorInfo[1]) ? (int)$e->errorInfo[1] : 0);
-                    if ($sqlState === '23000' || $sqlState === '1062' || $mysqlErr === 1062) {
+                    // Treat ONLY duplicate-key as skippable; other integrity errors must be surfaced.
+                    if ($mysqlErr === 1062) {
                         $identifier = isset($row[0]) ? trim((string)$row[0]) : '';
                         $duplicates[] = $identifier !== '' ? $identifier : 'schedule_row';
                         continue;
@@ -756,11 +906,13 @@ try {
     ]);
 
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) {
+    if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
     if (isset($handle) && is_resource($handle)) {
         fclose($handle);
     }
-    json_response(500, ['status' => 'error', 'message' => 'Upload failed: ' . $e->getMessage()]);
+    $statusCode = ($e instanceof HttpException) ? $e->statusCode : 500;
+    $prefix = ($statusCode >= 500) ? 'Upload failed: ' : '';
+    json_response($statusCode, ['status' => 'error', 'message' => $prefix . $e->getMessage()]);
 }

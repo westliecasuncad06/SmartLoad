@@ -1,26 +1,26 @@
-course_code,name,program,units,prerequisites
-IT101,Introduction to IT,BS Information Technology,3,None
-IT102,Data Communications,BS Information Technology,3,IT101
-CS101,Programming Fundamentals,BS Computer Science,3,None
-CS102,Object-Oriented Programming,BS Computer Science,3,CS101
-CS201,Data Structures,BS Computer Science,3,CS102
-CS210,Operating Systems,BS Computer Science,3,CS201
-CS220,Computer Architecture,BS Computer Science,3,CS201
-CS301,Software Engineering,BS Computer Science,3,CS201
-IT202,Database Systems,BS Information Technology,3,IT101
-IT204,Computer Networking,BS Information Technology,3,IT102
-IT205,Systems Analysis and Design,BS Information Technology,3,IT101
-IT206,Web Systems and Technologies,BS Information Technology,3,CS101
-IT209,Network Security,BS Information Technology,3,IT204
-IT210,Database Administration,BS Information Technology,3,IT202
-IT211,IT Service Management,BS Information Technology,3,IT205
-IT240,Cloud Computing,BS Information Technology,3,IT202
-MATH101,Calculus I,BS Mathematics,3,None
-MATH102,Calculus II,BS Mathematics,3,MATH101
-MATH201,Linear Algebra,BS Mathematics,3,MATH102
-MATH202,Differential Equations,BS Mathematics,3,MATH102
-MATH203,Probability and Statistics,BS Mathematics,3,MATH101
-MATH205,Discrete Structures,BS Mathematics,3,MATH101
-GEN101,Communication Skills,General Education,3,None
-GEN102,Ethics and Society,General Education,3,None
-GEN103,Technical Writing,General Education,3,GEN101
+course_code,name,program,units,prerequisites,is_archived
+IT101,Introduction to IT,BS Information Technology,3,None,0
+IT102,Data Communications,BS Information Technology,3,IT101,0
+CS101,Programming Fundamentals,BS Computer Science,3,None,0
+CS102,Object-Oriented Programming,BS Computer Science,3,CS101,0
+CS201,Data Structures,BS Computer Science,3,CS102,0
+CS210,Operating Systems,BS Computer Science,3,CS201,0
+CS220,Computer Architecture,BS Computer Science,3,CS201,0
+CS301,Software Engineering,BS Computer Science,3,CS201,0
+IT202,Database Systems,BS Information Technology,3,IT101,0
+IT204,Computer Networking,BS Information Technology,3,IT102,0
+IT205,Systems Analysis and Design,BS Information Technology,3,IT101,0
+IT206,Web Systems and Technologies,BS Information Technology,3,CS101,0
+IT209,Network Security,BS Information Technology,3,IT204,0
+IT210,Database Administration,BS Information Technology,3,IT202,0
+IT211,IT Service Management,BS Information Technology,3,IT205,0
+IT240,Cloud Computing,BS Information Technology,3,IT202,0
+MATH101,Calculus I,BS Mathematics,3,None,0
+MATH102,Calculus II,BS Mathematics,3,MATH101,0
+MATH201,Linear Algebra,BS Mathematics,3,MATH102,0
+MATH202,Differential Equations,BS Mathematics,3,MATH102,0
+MATH203,Probability and Statistics,BS Mathematics,3,MATH101,0
+MATH205,Discrete Structures,BS Mathematics,3,MATH101,0
+GEN101,Communication Skills,General Education,3,None,0
+GEN102,Ethics and Society,General Education,3,None,0
+GEN103,Technical Writing,General Education,3,GEN101,0

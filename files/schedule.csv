@@ -1,26 +1,5 @@
-subject_id,day_of_week,start_time,end_time,room,section
-1,Monday,08:00:00,10:00:00,Room 101,BSIT-1A
-2,Monday,10:00:00,12:00:00,Room 101,BSIT-1A
-3,Tuesday,08:00:00,11:00:00,Room 102,BSCS-1A
-4,Tuesday,13:00:00,15:00:00,Room 103,BSCS-1A
-5,Wednesday,08:00:00,10:00:00,Room 104,BSCS-2A
-6,Wednesday,10:00:00,12:00:00,Room 105,BSCS-2A
-7,Thursday,08:00:00,10:00:00,Room 106,BSCS-2A
-8,Thursday,10:00:00,12:00:00,Room 107,BSCS-2A
-9,Monday,13:00:00,15:00:00,Lab A,BSIT-2A
-10,Tuesday,10:00:00,12:00:00,Lab B,BSIT-2A
-11,Wednesday,13:00:00,15:00:00,Room 108,BSIT-2A
-12,Thursday,13:00:00,15:00:00,Lab C,BSIT-2A
-13,Friday,08:00:00,10:00:00,Lab D,BSIT-3A
-14,Friday,10:00:00,12:00:00,Room 109,BSIT-3A
-15,Monday,15:00:00,17:00:00,Room 110,BSIT-3A
-16,Tuesday,15:00:00,17:00:00,Room 201,BSIT-3A
-17,Wednesday,08:00:00,10:00:00,Room 202,BSMATH-1A
-18,Wednesday,10:00:00,12:00:00,Room 203,BSMATH-1A
-19,Thursday,13:00:00,15:00:00,Room 204,BSMATH-2A
-20,Thursday,15:00:00,17:00:00,Room 205,BSMATH-2A
-21,Friday,13:00:00,15:00:00,Room 206,BSMATH-2A
-22,Friday,15:00:00,17:00:00,Room 207,BSMATH-2A
-23,Monday,10:00:00,12:00:00,Room 301,GEN-1
-24,Tuesday,10:00:00,12:00:00,Room 302,GEN-1
-25,Wednesday,10:00:00,12:00:00,Room 303,GEN-1
+course_code,day_of_week,start_time,end_time,room,section
+IT101,Monday,08:00:00,10:00:00,Room 101,BSIT-1A
+IT102,Monday,10:00:00,12:00:00,Room 101,BSIT-1A
+CS101,Tuesday,08:00:00,11:00:00,Room 102,BSCS-1A
+CS102,Tuesday,13:00:00,15:00:00,Room 103,BSCS-1A

@@ -1,21 +1,21 @@
-name,email,type,max_units,expertise_tags,availability
-John Doe,john.doe@university.edu,Full-time,18,"PHP, MySQL, Web Dev","Mon 08:00-17:00;Tue 08:00-17:00;Wed 08:00-17:00"
-Jane Smith,jane.smith@university.edu,Full-time,18,"Networking, Security","Tue 09:00-15:00;Thu 09:00-15:00"
-Alan Turing,alan.turing@university.edu,Part-time,12,"Mathematics, Algorithms","Mon 08:00-12:00;Wed 08:00-12:00;Fri 08:00-12:00"
-Maria Garcia,maria.garcia@university.edu,Full-time,18,"Literature, Writing","Mon 10:00-16:00;Tue 10:00-16:00;Thu 10:00-16:00"
-Robert Brown,robert.brown@university.edu,Full-time,18,"Database, SQL, Data Modeling","Mon 09:00-17:00;Wed 09:00-17:00"
-Emily Davis,emily.davis@university.edu,Part-time,12,"UI/UX Design, Figma","Tue 13:00-17:00;Thu 13:00-17:00"
-Michael Johnson,michael.johnson@university.edu,Full-time,18,"Java, OOP, Software Engineering","Mon 08:00-12:00;Tue 08:00-12:00;Fri 08:00-12:00"
-Sophia Martinez,sophia.martinez@university.edu,Full-time,18,"Artificial Intelligence, Machine Learning","Wed 10:00-17:00;Thu 10:00-17:00"
-Daniel Lee,daniel.lee@university.edu,Part-time,12,"Cloud Computing, AWS","Mon 13:00-18:00;Wed 13:00-18:00"
-Olivia Wilson,olivia.wilson@university.edu,Full-time,18,"Cybersecurity, Ethical Hacking","Tue 08:00-16:00;Thu 08:00-16:00"
-Kevin Chen,kevin.chen@university.edu,Full-time,18,"Data Structures, Algorithms, Discrete Math","Mon 08:00-17:00;Thu 08:00-17:00"
-Priya Patel,priya.patel@university.edu,Full-time,18,"Operating Systems, Computer Architecture","Tue 10:00-17:00;Fri 10:00-17:00"
-Noah Williams,noah.williams@university.edu,Part-time,12,"Web Development, JavaScript, UI","Wed 08:00-12:00;Fri 13:00-17:00"
-Liam Anderson,liam.anderson@university.edu,Full-time,18,"Software Engineering, Project Management","Mon 10:00-17:00;Wed 10:00-17:00"
-Emma Thompson,emma.thompson@university.edu,Part-time,12,"Probability, Statistics, Data Analytics","Tue 08:00-12:00;Thu 08:00-12:00"
-Isabella Cruz,isabella.cruz@university.edu,Full-time,18,"Database Administration, SQL, ETL","Mon 13:00-17:00;Tue 13:00-17:00;Thu 13:00-17:00"
-Ethan Nguyen,ethan.nguyen@university.edu,Full-time,18,"Networks, Data Communications, Routing","Wed 08:00-16:00;Fri 08:00-16:00"
-Mia Robinson,mia.robinson@university.edu,Part-time,12,"Technical Writing, Communication","Mon 08:00-12:00;Thu 08:00-12:00"
-Lucas Perez,lucas.perez@university.edu,Full-time,18,"Information Security, Network Security","Tue 09:00-17:00;Wed 09:00-17:00"
-Chloe Kim,chloe.kim@university.edu,Full-time,18,"Mobile Development, HCI, UX","Mon 09:00-12:00;Wed 09:00-12:00;Fri 09:00-12:00"
+name,email,type,max_units,expertise_tags,availability,current_units,is_archived
+John Doe,john.doe@university.edu,Full-time,18,"PHP, MySQL, Web Dev","Mon 08:00-17:00;Tue 08:00-17:00;Wed 08:00-17:00",0,0
+Jane Smith,jane.smith@university.edu,Full-time,18,"Networking, Security","Tue 09:00-15:00;Thu 09:00-15:00",0,0
+Alan Turing,alan.turing@university.edu,Part-time,12,"Mathematics, Algorithms","Mon 08:00-12:00;Wed 08:00-12:00;Fri 08:00-12:00",0,0
+Maria Garcia,maria.garcia@university.edu,Full-time,18,"Literature, Writing","Mon 10:00-16:00;Tue 10:00-16:00;Thu 10:00-16:00",0,0
+Robert Brown,robert.brown@university.edu,Full-time,18,"Database, SQL, Data Modeling","Mon 09:00-17:00;Wed 09:00-17:00",0,0
+Emily Davis,emily.davis@university.edu,Part-time,12,"UI/UX Design, Figma","Tue 13:00-17:00;Thu 13:00-17:00",0,0
+Michael Johnson,michael.johnson@university.edu,Full-time,18,"Java, OOP, Software Engineering","Mon 08:00-12:00;Tue 08:00-12:00;Fri 08:00-12:00",0,0
+Sophia Martinez,sophia.martinez@university.edu,Full-time,18,"Artificial Intelligence, Machine Learning","Wed 10:00-17:00;Thu 10:00-17:00",0,0
+Daniel Lee,daniel.lee@university.edu,Part-time,12,"Cloud Computing, AWS","Mon 13:00-18:00;Wed 13:00-18:00",0,0
+Olivia Wilson,olivia.wilson@university.edu,Full-time,18,"Cybersecurity, Ethical Hacking","Tue 08:00-16:00;Thu 08:00-16:00",0,0
+Kevin Chen,kevin.chen@university.edu,Full-time,18,"Data Structures, Algorithms, Discrete Math","Mon 08:00-17:00;Thu 08:00-17:00",0,0
+Priya Patel,priya.patel@university.edu,Full-time,18,"Operating Systems, Computer Architecture","Tue 10:00-17:00;Fri 10:00-17:00",0,0
+Noah Williams,noah.williams@university.edu,Part-time,12,"Web Development, JavaScript, UI","Wed 08:00-12:00;Fri 13:00-17:00",0,0
+Liam Anderson,liam.anderson@university.edu,Full-time,18,"Software Engineering, Project Management","Mon 10:00-17:00;Wed 10:00-17:00",0,0
+Emma Thompson,emma.thompson@university.edu,Part-time,12,"Probability, Statistics, Data Analytics","Tue 08:00-12:00;Thu 08:00-12:00",0,0
+Isabella Cruz,isabella.cruz@university.edu,Full-time,18,"Database Administration, SQL, ETL","Mon 13:00-17:00;Tue 13:00-17:00;Thu 13:00-17:00",0,0
+Ethan Nguyen,ethan.nguyen@university.edu,Full-time,18,"Networks, Data Communications, Routing","Wed 08:00-16:00;Fri 08:00-16:00",0,0
+Mia Robinson,mia.robinson@university.edu,Part-time,12,"Technical Writing, Communication","Mon 08:00-12:00;Thu 08:00-12:00",0,0
+Lucas Perez,lucas.perez@university.edu,Full-time,18,"Information Security, Network Security","Tue 09:00-17:00;Wed 09:00-17:00",0,0
+Chloe Kim,chloe.kim@university.edu,Full-time,18,"Mobile Development, HCI, UX","Mon 09:00-12:00;Wed 09:00-12:00;Fri 09:00-12:00",0,0
