@@ -1046,23 +1046,23 @@ try {
         </div>
     </div>
 
-    <!-- MODAL: UPLOAD CONFLICTS -->
-    <div id="conflictModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+    <!-- MODAL: UPLOAD CONFLICTS (RESOLUTION) -->
+    <div id="uploadConflictModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 transform transition-all">
             <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                 <div>
                     <h2 class="text-lg font-bold text-slate-900">Upload Conflicts Detected</h2>
-                    <p class="text-sm text-slate-500 mt-0.5" id="conflictSubtitle">Some rows already exist in the database.</p>
+                    <p class="text-sm text-slate-500 mt-0.5" id="uploadConflictSubtitle">Some rows already exist in the database.</p>
                 </div>
-                <button onclick="closeConflictModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fas fa-times"></i></button>
+                <button onclick="closeUploadConflictModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fas fa-times"></i></button>
             </div>
 
             <div class="px-6 py-4">
                 <div class="flex items-center justify-between gap-4 flex-wrap">
-                    <div class="text-sm text-slate-700" id="conflictSummary">0 conflicts</div>
+                    <div class="text-sm text-slate-700" id="uploadConflictSummary">0 conflicts</div>
                     <div class="flex items-center gap-2">
-                        <button id="conflictKeepBtn" onclick="resolveConflictKeep()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Keep Existing</button>
-                        <button id="conflictUpdateBtn" onclick="resolveConflictUpdate()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2">
+                        <button id="uploadConflictKeepBtn" onclick="resolveConflictKeep()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Keep Existing</button>
+                        <button id="uploadConflictUpdateBtn" onclick="resolveConflictUpdate()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2">
                             <i class="fas fa-rotate"></i> Update Existing
                         </button>
                     </div>
@@ -1078,7 +1078,7 @@ try {
                                     <th class="px-4 py-3 text-left text-slate-600 font-semibold">Incoming (File)</th>
                                 </tr>
                             </thead>
-                            <tbody id="conflictTableBody"></tbody>
+                            <tbody id="uploadConflictTableBody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -1087,7 +1087,27 @@ try {
             </div>
 
             <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end bg-slate-50 rounded-b-xl">
-                <button onclick="closeConflictModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Close</button>
+                <button onclick="closeUploadConflictModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: UPLOAD COMPLETE WITH CONFLICTS (DUPLICATES SKIPPED) -->
+    <div id="conflictModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 transform transition-all">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center gap-3">
+                <i class="fas fa-triangle-exclamation text-amber-500"></i>
+                <h2 class="text-lg font-bold text-slate-900">Upload Complete with Conflicts</h2>
+            </div>
+
+            <div class="px-6 py-4">
+                <p id="conflictSummary" class="text-sm text-slate-700"></p>
+
+                <ul id="conflictList" class="mt-4 max-h-64 overflow-y-auto bg-amber-50 border border-amber-200 rounded-lg px-4 py-3"></ul>
+            </div>
+
+            <div class="px-6 py-4 border-t border-slate-200 flex justify-end bg-slate-50 rounded-b-xl">
+                <button onclick="closeConflictModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">Understood</button>
             </div>
         </div>
     </div>
