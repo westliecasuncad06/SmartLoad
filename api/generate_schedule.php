@@ -93,6 +93,76 @@ try {
         exit;
     }
 
+    // Load policy settings (or fallback defaults)
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS policy_settings (
+            id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+            max_teaching_load TINYINT UNSIGNED NOT NULL DEFAULT 18,
+            expertise_weight TINYINT UNSIGNED NOT NULL DEFAULT 70,
+            availability_weight TINYINT UNSIGNED NOT NULL DEFAULT 30,
+            detect_schedule_overlaps TINYINT(1) NOT NULL DEFAULT 1,
+            flag_overload_teachers TINYINT(1) NOT NULL DEFAULT 1,
+            check_prerequisites TINYINT(1) NOT NULL DEFAULT 1,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+
+    $policy = [
+        'max_teaching_load' => 18,
+        'expertise_weight' => 70,
+        'availability_weight' => 30,
+        'detect_schedule_overlaps' => 1,
+        'flag_overload_teachers' => 1,
+        'check_prerequisites' => 1,
+    ];
+
+    $policyRow = $pdo->query('SELECT * FROM policy_settings WHERE id = 1 LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+    if ($policyRow) {
+        $policy['max_teaching_load'] = (int) ($policyRow['max_teaching_load'] ?? 18);
+        $policy['expertise_weight'] = (int) ($policyRow['expertise_weight'] ?? 70);
+        $policy['availability_weight'] = (int) ($policyRow['availability_weight'] ?? 30);
+        $policy['detect_schedule_overlaps'] = (int) ($policyRow['detect_schedule_overlaps'] ?? 1);
+        $policy['flag_overload_teachers'] = (int) ($policyRow['flag_overload_teachers'] ?? 1);
+        $policy['check_prerequisites'] = (int) ($policyRow['check_prerequisites'] ?? 1);
+    }
+
+    $maxTeachingLoad = max(1, (int) $policy['max_teaching_load']);
+    $expertiseWeightPct = max(0, min(100, (int) $policy['expertise_weight']));
+    $availabilityWeightPct = 100 - $expertiseWeightPct;
+    $detectScheduleOverlaps = ((int) $policy['detect_schedule_overlaps'] === 1);
+    $enforceOverloadCap = ((int) $policy['flag_overload_teachers'] === 1);
+    $requirePrereqCheck = ((int) $policy['check_prerequisites'] === 1);
+
+    $timeToSeconds = static function (string $time): int {
+        $parts = explode(':', $time);
+        $h = isset($parts[0]) ? (int) $parts[0] : 0;
+        $m = isset($parts[1]) ? (int) $parts[1] : 0;
+        $s = isset($parts[2]) ? (int) $parts[2] : 0;
+        return ($h * 3600) + ($m * 60) + $s;
+    };
+
+    $hasScheduleConflict = static function (array $occupiedSlots, array $candidateSlots): bool {
+        foreach ($candidateSlots as $candidate) {
+            $day = (string) ($candidate['day_of_week'] ?? '');
+            if ($day === '' || !isset($occupiedSlots[$day])) {
+                continue;
+            }
+            $candidateStart = (int) ($candidate['start_sec'] ?? 0);
+            $candidateEnd = (int) ($candidate['end_sec'] ?? 0);
+
+            foreach ($occupiedSlots[$day] as $occupied) {
+                $occupiedStart = (int) ($occupied['start_sec'] ?? 0);
+                $occupiedEnd = (int) ($occupied['end_sec'] ?? 0);
+
+                // overlap if start < other_end && other_start < end
+                if ($candidateStart < $occupiedEnd && $occupiedStart < $candidateEnd) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
     $tokenize = static function (string $value): array {
         $value = strtolower($value);
         $value = preg_replace('/[^a-z0-9]+/i', ' ', $value);
@@ -162,24 +232,75 @@ try {
         $teacherById[$id] = $t;
     }
 
+    // Build subject schedule index for overlap checks.
+    $subjectScheduleRows = $pdo->query('SELECT subject_id, day_of_week, start_time, end_time FROM schedules')->fetchAll();
+    $subjectSchedulesById = [];
+    foreach ($subjectScheduleRows as $ssr) {
+        $sid = (int) ($ssr['subject_id'] ?? 0);
+        if ($sid <= 0) {
+            continue;
+        }
+        $subjectSchedulesById[$sid][] = [
+            'day_of_week' => (string) ($ssr['day_of_week'] ?? ''),
+            'start_sec' => $timeToSeconds((string) ($ssr['start_time'] ?? '00:00:00')),
+            'end_sec' => $timeToSeconds((string) ($ssr['end_time'] ?? '00:00:00')),
+        ];
+    }
+
+    // Build existing occupied slots per teacher from current assignments.
+    $teacherOccupied = [];
+    $occupiedRows = $pdo->query(
+        'SELECT a.teacher_id, sch.day_of_week, sch.start_time, sch.end_time
+         FROM assignments a
+         JOIN schedules sch ON sch.subject_id = a.subject_id
+         WHERE a.status IN ("Pending", "Approved", "Manual")'
+    )->fetchAll();
+
+    foreach ($occupiedRows as $orow) {
+        $tid = (int) ($orow['teacher_id'] ?? 0);
+        $day = (string) ($orow['day_of_week'] ?? '');
+        if ($tid <= 0 || $day === '') {
+            continue;
+        }
+        $teacherOccupied[$tid][$day][] = [
+            'start_sec' => $timeToSeconds((string) ($orow['start_time'] ?? '00:00:00')),
+            'end_sec' => $timeToSeconds((string) ($orow['end_time'] ?? '00:00:00')),
+        ];
+    }
+
     $plannedAssignments = [];
     $assignedCount = 0;
     $unassignedCount = 0;
 
     foreach ($unassignedSubjects as $subject) {
+        $subjectId = (int) ($subject['id'] ?? 0);
         $subjectUnits = (int) ($subject['units'] ?? 0);
         $subjectPrereq = (string) ($subject['prerequisites'] ?? '');
+        $subjectSlots = $subjectSchedulesById[$subjectId] ?? [];
 
         // Eligible based on simulated load
         $eligible = [];
         foreach ($teacherById as $teacher) {
-            $maxUnits = (int) ($teacher['max_units'] ?? 0);
-            if ($maxUnits <= 0) {
+            $teacherMaxUnits = (int) ($teacher['max_units'] ?? 0);
+            if ($teacherMaxUnits <= 0) {
                 continue;
             }
 
             $currentUnits = (int) ($teacher['current_units'] ?? 0);
-            if ($currentUnits + $subjectUnits <= $maxUnits) {
+            $effectiveMaxUnits = min($teacherMaxUnits, $maxTeachingLoad);
+            if ($effectiveMaxUnits <= 0) {
+                $effectiveMaxUnits = $teacherMaxUnits;
+            }
+
+            if ($detectScheduleOverlaps && !empty($subjectSlots)) {
+                $tid = (int) ($teacher['id'] ?? 0);
+                $occupied = $teacherOccupied[$tid] ?? [];
+                if ($hasScheduleConflict($occupied, $subjectSlots)) {
+                    continue;
+                }
+            }
+
+            if (!$enforceOverloadCap || ($currentUnits + $subjectUnits <= $effectiveMaxUnits)) {
                 $eligible[] = $teacher;
             }
         }
@@ -192,15 +313,18 @@ try {
         // Score eligible teachers quickly (Expertise 70% + Availability 30%)
         $scored = [];
         foreach ($eligible as $teacher) {
-            $expertise = $heuristicExpertiseScore(
-                (string) ($teacher['expertise_tags'] ?? ''),
-                $subjectPrereq
-            );
+            $expertise = $requirePrereqCheck
+                ? $heuristicExpertiseScore(
+                    (string) ($teacher['expertise_tags'] ?? ''),
+                    $subjectPrereq
+                )
+                : ['score' => 50, 'rationale' => 'Prerequisite checking disabled by policy setting.'];
 
-            $maxUnits = max(1, (int) ($teacher['max_units'] ?? 1));
+            $teacherMaxUnits = (int) ($teacher['max_units'] ?? 1);
+            $maxUnits = max(1, min($teacherMaxUnits, $maxTeachingLoad));
             $currentUnits = (int) ($teacher['current_units'] ?? 0);
             $availabilityScore = (int) round(max(0.0, 1.0 - ($currentUnits / $maxUnits)) * 100);
-            $combined = (int) round(($expertise['score'] * 0.7) + ($availabilityScore * 0.3));
+            $combined = (int) round(($expertise['score'] * ($expertiseWeightPct / 100)) + ($availabilityScore * ($availabilityWeightPct / 100)));
 
             $scored[] = [
                 'teacher' => $teacher,
@@ -247,10 +371,11 @@ try {
                     $bestTeacher = $pickedTeacher;
 
                     $aiExpertiseScore = (int) ($aiPick['score'] ?? 0);
-                    $maxUnits = max(1, (int) ($pickedTeacher['max_units'] ?? 1));
+                    $teacherMaxUnits = (int) ($pickedTeacher['max_units'] ?? 1);
+                    $maxUnits = max(1, min($teacherMaxUnits, $maxTeachingLoad));
                     $currentUnits = (int) ($pickedTeacher['current_units'] ?? 0);
                     $availabilityScore = (int) round(max(0.0, 1.0 - ($currentUnits / $maxUnits)) * 100);
-                    $bestScore = (int) round(($aiExpertiseScore * 0.7) + ($availabilityScore * 0.3));
+                    $bestScore = (int) round(($aiExpertiseScore * ($expertiseWeightPct / 100)) + ($availabilityScore * ($availabilityWeightPct / 100)));
                     $bestRationale = (string) ($aiPick['rationale'] ?? $bestRationale);
                 }
             }
@@ -263,7 +388,7 @@ try {
         }
 
         $plannedAssignments[] = [
-            'subject_id' => (int) ($subject['id'] ?? 0),
+            'subject_id' => $subjectId,
             'teacher_id' => $bestTeacherId,
             'subject_units' => $subjectUnits,
             'rationale' => $bestRationale,
@@ -275,6 +400,21 @@ try {
 
         // Update simulated load
         $teacherById[$bestTeacherId]['current_units'] = (int) $teacherById[$bestTeacherId]['current_units'] + $subjectUnits;
+
+        // Update occupied slots for subsequent overlap checks.
+        if ($detectScheduleOverlaps && !empty($subjectSlots)) {
+            foreach ($subjectSlots as $slot) {
+                $day = (string) ($slot['day_of_week'] ?? '');
+                if ($day === '') {
+                    continue;
+                }
+                $teacherOccupied[$bestTeacherId][$day][] = [
+                    'start_sec' => (int) ($slot['start_sec'] ?? 0),
+                    'end_sec' => (int) ($slot['end_sec'] ?? 0),
+                ];
+            }
+        }
+
         $assignedCount++;
     }
 
