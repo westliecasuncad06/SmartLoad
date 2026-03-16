@@ -84,26 +84,59 @@ function closeHistoryModal() {
     document.getElementById('historyModal').classList.add('hidden');
 }
 
-function openConflictModal() {
-    document.getElementById('conflictModal').classList.remove('hidden');
+function openUploadConflictModal() {
+    document.getElementById('uploadConflictModal').classList.remove('hidden');
 }
 
-function closeConflictModal() {
-    document.getElementById('conflictModal').classList.add('hidden');
+function closeUploadConflictModal() {
+    const modal = document.getElementById('uploadConflictModal');
+    if (modal) modal.classList.add('hidden');
+
     conflictModalState = { type: null, file: null, conflicts: [], rowsInserted: 0 };
+<<<<<<< Updated upstream
     reloadAfterConflictResolve = false;
     const tbody = document.getElementById('conflictTableBody');
+=======
+
+    const tbody = document.getElementById('uploadConflictTableBody');
+>>>>>>> Stashed changes
     if (tbody) tbody.innerHTML = '';
+}
+
+// Success-with-duplicates modal (new)
+function closeConflictModal() {
+    const modal = document.getElementById('conflictModal');
+    if (modal) modal.classList.add('hidden');
+
+    const summary = document.getElementById('conflictSummary');
+    if (summary) summary.textContent = '';
+
+    const list = document.getElementById('conflictList');
+    if (list) list.innerHTML = '';
 }
 
 // Close modals when clicking outside
 document.addEventListener('DOMContentLoaded', function () {
+<<<<<<< HEAD
     ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal', 'teacherImportModal', 'teacherAddModal', 'teacherViewModal', 'teacherEditModal', 'subjectImportModal', 'subjectAddModal', 'subjectViewModal', 'subjectEditModal'].forEach(modalId => {
+=======
+<<<<<<< Updated upstream
+    ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal', 'teacherImportModal', 'teacherAddModal', 'teacherViewModal', 'teacherEditModal'].forEach(modalId => {
+=======
+    ['overrideModal', 'settingsModal', 'historyModal', 'uploadConflictModal', 'conflictModal'].forEach(modalId => {
+>>>>>>> Stashed changes
+>>>>>>> 31a54a6dd8d360494a0e46d58d57f2ddbd953048
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.addEventListener('click', function (e) {
                 if (e.target === this) {
-                    this.classList.add('hidden');
+                    if (modalId === 'uploadConflictModal') {
+                        closeUploadConflictModal();
+                    } else if (modalId === 'conflictModal') {
+                        closeConflictModal();
+                    } else {
+                        this.classList.add('hidden');
+                    }
                 }
             });
         }
@@ -703,6 +736,12 @@ async function uploadFile(file, type) {
 
     const data = await response.json();
 
+    // Some endpoints may return non-2xx for conflict-style responses.
+    // Treat known statuses as valid outcomes and let the caller decide UI.
+    if (data && data.status === 'conflict') {
+        return data;
+    }
+
     if (!response.ok) {
         throw new Error((data && data.message) ? data.message : 'Upload failed.');
     }
@@ -713,24 +752,30 @@ async function uploadFile(file, type) {
             : '';
 
         if (data.duplicates && Array.isArray(data.duplicates) && data.duplicates.length > 0) {
-            const dupList = data.duplicates.join(', ');
-            alert(
-                'Successfully inserted ' + data.rows_inserted + ' rows.' + updatedMsg +
-                '\n\nHowever, the following entries were skipped because they already exist: ' + dupList
-            );
+            const summary = document.getElementById('conflictSummary');
+            const list = document.getElementById('conflictList');
+            const modal = document.getElementById('conflictModal');
+
+            if (summary) {
+                summary.textContent = `Successfully inserted ${data.rows_inserted} new records. However, the following entries were skipped because they already exist in the system:`;
+            }
+
+            if (list) {
+                list.innerHTML = '';
+                data.duplicates.forEach((name) => {
+                    const li = document.createElement('li');
+                    li.className = 'text-red-600 text-sm border-b border-red-200 py-1 last:border-b-0';
+                    li.textContent = String(name);
+                    list.appendChild(li);
+                });
+            }
+
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
         } else {
             alert('Successfully inserted ' + data.rows_inserted + ' rows!' + updatedMsg);
         }
-        return data;
-    }
-
-    if (data.status === 'conflict') {
-        alert(
-            type.charAt(0).toUpperCase() + type.slice(1) + ' uploaded with duplicates found.\n\n' +
-            '• ' + (data.rows_inserted || 0) + ' new rows inserted\n' +
-            '• ' + (data.conflict_count || 0) + ' duplicates detected\n\n' +
-            'You can review and choose to update existing records.'
-        );
         return data;
     }
 
@@ -754,9 +799,9 @@ function showUploadConflicts(type, file, data) {
     conflictModalState.conflicts = Array.isArray(data.conflicts) ? data.conflicts : [];
     conflictModalState.rowsInserted = data.rows_inserted || 0;
 
-    const subtitle = document.getElementById('conflictSubtitle');
-    const summary = document.getElementById('conflictSummary');
-    const tbody = document.getElementById('conflictTableBody');
+    const subtitle = document.getElementById('uploadConflictSubtitle');
+    const summary = document.getElementById('uploadConflictSummary');
+    const tbody = document.getElementById('uploadConflictTableBody');
     if (!subtitle || !summary || !tbody) return;
 
     const label = type.charAt(0).toUpperCase() + type.slice(1);
@@ -794,24 +839,28 @@ function showUploadConflicts(type, file, data) {
         tbody.appendChild(tr);
     });
 
-    openConflictModal();
+    openUploadConflictModal();
 }
 
 async function resolveConflictUpdate() {
     if (!conflictModalState.file || !conflictModalState.type) return;
 
-    const btnUpdate = document.getElementById('conflictUpdateBtn');
-    const btnKeep = document.getElementById('conflictKeepBtn');
+    const btnUpdate = document.getElementById('uploadConflictUpdateBtn');
+    const btnKeep = document.getElementById('uploadConflictKeepBtn');
     if (btnUpdate) btnUpdate.disabled = true;
     if (btnKeep) btnKeep.disabled = true;
 
     try {
         const data = await uploadFile(conflictModalState.file, conflictModalState.type, { conflict_action: 'update' });
+<<<<<<< Updated upstream
         const shouldReload = reloadAfterConflictResolve;
         closeConflictModal();
         if (shouldReload) {
             location.reload();
         }
+=======
+        closeUploadConflictModal();
+>>>>>>> Stashed changes
         // Success alert already shown by uploadFile
         return data;
     } catch (err) {
@@ -824,11 +873,15 @@ async function resolveConflictUpdate() {
 
 function resolveConflictKeep() {
     // Keep existing records; we already inserted the non-duplicates.
+<<<<<<< Updated upstream
     const shouldReload = reloadAfterConflictResolve;
     closeConflictModal();
     if (shouldReload) {
         location.reload();
     }
+=======
+    closeUploadConflictModal();
+>>>>>>> Stashed changes
 }
 
 function removeFile(type) {
@@ -1146,4 +1199,78 @@ function csvRow(fields) {
 
 function toText(value) {
     return value === null || value === undefined ? '' : String(value);
+}
+
+// --------------------------------------------------
+// Audit Log Export (CSV & PDF)
+// --------------------------------------------------
+async function exportAuditLogs(format) {
+    const el = document.getElementById('auditLogData');
+    if (!el) { alert('No audit log data available.'); return; }
+
+    let logs;
+    try { logs = JSON.parse(el.textContent); } catch (_) { alert('Failed to parse audit log data.'); return; }
+    if (!logs.length) { alert('No logs to export.'); return; }
+
+    // Close export dropdown
+    document.getElementById('exportMenu-audit').classList.add('hidden');
+
+    if (format === 'csv') {
+        let csv = 'Action Type,Description,User,Date/Time\n';
+        logs.forEach(l => {
+            const date = new Date(l.created_at).toLocaleString();
+            csv += csvRow([l.action_type, l.description || '', l.user, date]);
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'audit_logs_' + new Date().toISOString().split('T')[0] + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+    } else if (format === 'pdf') {
+        try {
+            await ensurePdfLibrariesLoaded();
+        } catch (_) {
+            alert('Unable to load PDF export library. Please check your internet connection and try again.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+        const headers = ['Action Type', 'Description', 'User', 'Date/Time'];
+        const body = logs.map(l => {
+            const date = new Date(l.created_at).toLocaleString();
+            return [toText(l.action_type), toText(l.description || ''), toText(l.user), toText(date)];
+        });
+
+        doc.setFontSize(16);
+        doc.text('Audit Trail Export', 40, 40);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text('SmartLoad - Generated ' + new Date().toLocaleString(), 40, 58);
+
+        doc.autoTable({
+            head: [headers],
+            body: body,
+            startY: 72,
+            styles: { fontSize: 9, cellPadding: 6, textColor: [30, 41, 59] },
+            headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            margin: { left: 40, right: 40 },
+            columnStyles: {
+                0: { cellWidth: 100 },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 80 },
+                3: { cellWidth: 120 }
+            }
+        });
+
+        doc.save('audit_logs_' + new Date().toISOString().split('T')[0] + '.pdf');
+    }
 }

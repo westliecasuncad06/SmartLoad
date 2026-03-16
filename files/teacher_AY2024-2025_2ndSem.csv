@@ -1,0 +1,13 @@
+name,email,type,max_units,expertise_tags
+Noah Williams,noah.williams@university.edu,Part-time,12,"Web Development, JavaScript, UI"
+Liam Anderson,liam.anderson@university.edu,Full-time,18,"Software Engineering, Project Management"
+Emma Thompson,emma.thompson@university.edu,Part-time,12,"Probability, Statistics, Data Analytics"
+Isabella Cruz,isabella.cruz@university.edu,Full-time,18,"Database Administration, SQL, ETL"
+Ethan Nguyen,ethan.nguyen@university.edu,Full-time,18,"Networks, Data Communications, Routing"
+Mia Robinson,mia.robinson@university.edu,Part-time,12,"Technical Writing, Communication"
+Lucas Perez,lucas.perez@university.edu,Full-time,18,"Information Security, Network Security"
+Chloe Kim,chloe.kim@university.edu,Full-time,18,"Mobile Development, HCI, UX"
+James Wilson,james.wilson@university.edu,Full-time,18,"Telecommunications, Signals, Data Transmission"
+Rachel Green,rachel.green@university.edu,Part-time,12,"Systems Design, Architecture"
+Victor Santos,victor.santos@university.edu,Full-time,18,"Blockchain, Cryptography"
+Sophie Laurent,sophie.laurent@university.edu,Part-time,12,"Quality Assurance, Testing"

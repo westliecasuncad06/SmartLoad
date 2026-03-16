@@ -1,0 +1,16 @@
+subject_id,day_of_week,start_time,end_time,room
+31,Monday,08:00,10:00,COMP-LAB-A
+32,Wednesday,09:00,12:00,RM301
+33,Tuesday,10:00,13:00,COMP-LAB-B
+34,Thursday,15:00,18:00,RM202
+35,Friday,08:00,11:00,LAB1
+36,Monday,13:00,15:00,RM401
+37,Tuesday,11:00,13:00,COMP-LAB-C
+38,Wednesday,14:00,17:00,RM501
+39,Thursday,10:00,12:00,LAB2
+40,Friday,14:00,17:00,RM302
+41,Monday,10:00,12:00,RM201
+42,Tuesday,14:00,17:00,LAB3
+43,Wednesday,08:00,10:00,RM101
+44,Thursday,12:00,14:00,RM502
+45,Friday,10:00,12:00,RM303
