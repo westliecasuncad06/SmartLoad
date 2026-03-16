@@ -70,10 +70,150 @@ function closeModal() {
 
 function openSettingsModal() {
     document.getElementById('settingsModal').classList.remove('hidden');
+    loadPolicySettings();
 }
 
 function closeSettingsModal() {
     document.getElementById('settingsModal').classList.add('hidden');
+}
+
+function initPolicySettingsForm() {
+    const expertiseSlider = document.getElementById('policyExpertiseWeight');
+    const availabilitySlider = document.getElementById('policyAvailabilityWeight');
+
+    if (!expertiseSlider || !availabilitySlider) return;
+
+    const syncLabels = () => {
+        const expertise = Number(expertiseSlider.value || 0);
+        const availability = Number(availabilitySlider.value || 0);
+
+        const eLabel = document.getElementById('policyExpertiseWeightLabel');
+        const aLabel = document.getElementById('policyAvailabilityWeightLabel');
+
+        if (eLabel) eLabel.textContent = expertise + '%';
+        if (aLabel) aLabel.textContent = availability + '%';
+    };
+
+    expertiseSlider.addEventListener('input', () => {
+        const expertise = Number(expertiseSlider.value || 0);
+        availabilitySlider.value = String(100 - expertise);
+        syncLabels();
+    });
+
+    availabilitySlider.addEventListener('input', () => {
+        const availability = Number(availabilitySlider.value || 0);
+        expertiseSlider.value = String(100 - availability);
+        syncLabels();
+    });
+
+    syncLabels();
+}
+
+function setPolicySettingsStatus(message, isError) {
+    const status = document.getElementById('policySettingsStatus');
+    if (!status) return;
+
+    if (!message) {
+        status.classList.add('hidden');
+        status.textContent = '';
+        status.classList.remove('text-green-600', 'text-red-600');
+        return;
+    }
+
+    status.classList.remove('hidden');
+    status.textContent = message;
+    status.classList.toggle('text-red-600', !!isError);
+    status.classList.toggle('text-green-600', !isError);
+}
+
+function applyPolicySettingsToForm(settings) {
+    const maxLoadInput = document.getElementById('policyMaxLoad');
+    const expertiseSlider = document.getElementById('policyExpertiseWeight');
+    const availabilitySlider = document.getElementById('policyAvailabilityWeight');
+    const detectOverlaps = document.getElementById('policyDetectScheduleOverlaps');
+    const flagOverload = document.getElementById('policyFlagOverloadTeachers');
+    const checkPrereq = document.getElementById('policyCheckPrerequisites');
+
+    if (maxLoadInput) maxLoadInput.value = String(Number(settings.max_teaching_load || 18));
+    if (expertiseSlider) expertiseSlider.value = String(Number(settings.expertise_weight || 70));
+    if (availabilitySlider) availabilitySlider.value = String(Number(settings.availability_weight || 30));
+    if (detectOverlaps) detectOverlaps.checked = Number(settings.detect_schedule_overlaps || 0) === 1;
+    if (flagOverload) flagOverload.checked = Number(settings.flag_overload_teachers || 0) === 1;
+    if (checkPrereq) checkPrereq.checked = Number(settings.check_prerequisites || 0) === 1;
+
+    const eLabel = document.getElementById('policyExpertiseWeightLabel');
+    const aLabel = document.getElementById('policyAvailabilityWeightLabel');
+    if (eLabel && expertiseSlider) eLabel.textContent = expertiseSlider.value + '%';
+    if (aLabel && availabilitySlider) aLabel.textContent = availabilitySlider.value + '%';
+}
+
+async function loadPolicySettings() {
+    try {
+        setPolicySettingsStatus('Loading settings...', false);
+        const response = await fetch('api/policy_settings.php', { method: 'GET' });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || data.status !== 'success' || !data.settings) {
+            throw new Error((data && data.message) ? data.message : 'Failed to load policy settings.');
+        }
+
+        applyPolicySettingsToForm(data.settings);
+        setPolicySettingsStatus('', false);
+    } catch (err) {
+        setPolicySettingsStatus('Failed to load settings: ' + (err && err.message ? err.message : String(err)), true);
+    }
+}
+
+async function savePolicySettings() {
+    const maxLoadInput = document.getElementById('policyMaxLoad');
+    const expertiseSlider = document.getElementById('policyExpertiseWeight');
+    const availabilitySlider = document.getElementById('policyAvailabilityWeight');
+    const detectOverlaps = document.getElementById('policyDetectScheduleOverlaps');
+    const flagOverload = document.getElementById('policyFlagOverloadTeachers');
+    const checkPrereq = document.getElementById('policyCheckPrerequisites');
+
+    const maxLoad = Number(maxLoadInput ? maxLoadInput.value : 18);
+    const expertise = Number(expertiseSlider ? expertiseSlider.value : 70);
+    const availability = Number(availabilitySlider ? availabilitySlider.value : 30);
+
+    if (!Number.isFinite(maxLoad) || maxLoad < 1) {
+        setPolicySettingsStatus('Maximum teaching load must be at least 1.', true);
+        return;
+    }
+
+    if ((expertise + availability) !== 100) {
+        setPolicySettingsStatus('Expertise and availability weights must total 100%.', true);
+        return;
+    }
+
+    const payload = {
+        max_teaching_load: maxLoad,
+        expertise_weight: expertise,
+        availability_weight: availability,
+        detect_schedule_overlaps: detectOverlaps && detectOverlaps.checked ? 1 : 0,
+        flag_overload_teachers: flagOverload && flagOverload.checked ? 1 : 0,
+        check_prerequisites: checkPrereq && checkPrereq.checked ? 1 : 0,
+    };
+
+    try {
+        setPolicySettingsStatus('Saving settings...', false);
+        const data = await postJson('api/policy_settings.php', payload);
+        if (!data || data.status !== 'success') {
+            throw new Error((data && data.message) ? data.message : 'Failed to save policy settings.');
+        }
+
+        if (data.settings) {
+            applyPolicySettingsToForm(data.settings);
+        }
+
+        setPolicySettingsStatus('Settings saved successfully.', false);
+        setTimeout(() => {
+            setPolicySettingsStatus('', false);
+            closeSettingsModal();
+        }, 650);
+    } catch (err) {
+        setPolicySettingsStatus('Failed to save settings: ' + (err && err.message ? err.message : String(err)), true);
+    }
 }
 
 function openHistoryModal() {
@@ -152,6 +292,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize Subjects page actions/modals
     initSubjectsPage();
+
+    // Initialize Policy Settings controls
+    initPolicySettingsForm();
 
     // Initialize filter controls (Teachers & Subjects)
     initTeacherFilters();

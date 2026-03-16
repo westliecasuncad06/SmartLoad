@@ -1003,34 +1003,35 @@ try {
             <div class="px-6 py-6 space-y-5">
                 <div>
                     <label class="block text-sm font-medium text-slate-900 mb-2">Maximum Teaching Load (Units)</label>
-                    <input type="number" value="18" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input id="policyMaxLoad" type="number" min="1" value="18" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <p class="text-xs text-slate-500 mt-1">Teachers exceeding this will be flagged as "Overload"</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-900 mb-3">Matching Priority Weights</label>
                     <div class="space-y-3">
                         <div>
-                            <div class="flex items-center justify-between mb-1"><span class="text-sm text-slate-600">Expertise Match</span><span class="text-sm font-medium text-indigo-600">70%</span></div>
-                            <input type="range" min="0" max="100" value="70" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                            <div class="flex items-center justify-between mb-1"><span class="text-sm text-slate-600">Expertise Match</span><span id="policyExpertiseWeightLabel" class="text-sm font-medium text-indigo-600">70%</span></div>
+                            <input id="policyExpertiseWeight" type="range" min="0" max="100" value="70" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
                         </div>
                         <div>
-                            <div class="flex items-center justify-between mb-1"><span class="text-sm text-slate-600">Availability Match</span><span class="text-sm font-medium text-blue-600">30%</span></div>
-                            <input type="range" min="0" max="100" value="30" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                            <div class="flex items-center justify-between mb-1"><span class="text-sm text-slate-600">Availability Match</span><span id="policyAvailabilityWeightLabel" class="text-sm font-medium text-blue-600">30%</span></div>
+                            <input id="policyAvailabilityWeight" type="range" min="0" max="100" value="30" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
                         </div>
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-900 mb-3">Conflict Detection</label>
                     <div class="space-y-2">
-                        <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked><span class="text-sm text-slate-700">Detect schedule overlaps</span></label>
-                        <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked><span class="text-sm text-slate-700">Flag overload teachers</span></label>
-                        <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked><span class="text-sm text-slate-700">Check prerequisite requirements</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer"><input id="policyDetectScheduleOverlaps" type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked><span class="text-sm text-slate-700">Detect schedule overlaps</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer"><input id="policyFlagOverloadTeachers" type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked><span class="text-sm text-slate-700">Flag overload teachers</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer"><input id="policyCheckPrerequisites" type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked><span class="text-sm text-slate-700">Check prerequisite requirements</span></label>
                     </div>
                 </div>
+                <p id="policySettingsStatus" class="hidden text-sm"></p>
             </div>
             <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end bg-slate-50 rounded-b-xl">
                 <button onclick="closeSettingsModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Cancel</button>
-                <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2"><i class="fas fa-check"></i> Save Settings</button>
+                <button onclick="savePolicySettings()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2"><i class="fas fa-check"></i> Save Settings</button>
             </div>
         </div>
     </div>
