@@ -20,6 +20,7 @@ CREATE TABLE subjects (
     program VARCHAR(100) NOT NULL,
     units TINYINT UNSIGNED NOT NULL,
     prerequisites VARCHAR(255) DEFAULT NULL,
+    is_archived TINYINT(1) NOT NULL DEFAULT 0,
     INDEX idx_subjects_program (program)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -74,3 +75,4 @@ CREATE TABLE audit_logs (
 
 -- Migration for existing databases:
 -- ALTER TABLE teachers ADD COLUMN is_archived TINYINT(1) NOT NULL DEFAULT 0;
+-- ALTER TABLE subjects ADD COLUMN is_archived TINYINT(1) NOT NULL DEFAULT 0;

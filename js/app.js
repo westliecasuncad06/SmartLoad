@@ -98,7 +98,7 @@ function closeConflictModal() {
 
 // Close modals when clicking outside
 document.addEventListener('DOMContentLoaded', function () {
-    ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal', 'teacherImportModal', 'teacherAddModal', 'teacherViewModal', 'teacherEditModal'].forEach(modalId => {
+    ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal', 'teacherImportModal', 'teacherAddModal', 'teacherViewModal', 'teacherEditModal', 'subjectImportModal', 'subjectAddModal', 'subjectViewModal', 'subjectEditModal'].forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.addEventListener('click', function (e) {
@@ -114,7 +114,245 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize Teachers page actions/modals
     initTeachersPage();
+
+    // Initialize Subjects page actions/modals
+    initSubjectsPage();
 });
+
+// --------------------------------------------------
+// Subjects Page - Modals & Actions
+// --------------------------------------------------
+function openSubjectModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeSubjectModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.add('hidden');
+}
+
+function getSubjectFromDataset(el) {
+    const d = el && el.dataset ? el.dataset : {};
+    return {
+        id: d.subjectId ? Number(d.subjectId) : 0,
+        course_code: d.subjectCourseCode || '',
+        name: d.subjectName || '',
+        program: d.subjectProgram || '',
+        units: d.subjectUnits !== undefined ? Number(d.subjectUnits) : 0,
+        prerequisites: d.subjectPrerequisites || '',
+    };
+}
+
+function initSubjectsPage() {
+    const btnImport = document.getElementById('btnSubjectImport');
+    const btnAdd = document.getElementById('btnSubjectAdd');
+
+    if (!btnImport && !btnAdd && !document.getElementById('page-subjects')) return;
+
+    // -------- Import CSV Modal --------
+    if (btnImport) {
+        btnImport.addEventListener('click', () => openSubjectModal('subjectImportModal'));
+    }
+
+    ['btnSubjectImportClose', 'btnSubjectImportCancel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => closeSubjectModal('subjectImportModal'));
+    });
+
+    const importUploadBtn = document.getElementById('btnSubjectImportUpload');
+    if (importUploadBtn) {
+        importUploadBtn.addEventListener('click', async () => {
+            const input = document.getElementById('subjectCsvFileInput');
+            if (!input || !input.files || !input.files.length) {
+                alert('Please select a CSV file to upload.');
+                return;
+            }
+            const file = input.files[0];
+            importUploadBtn.disabled = true;
+            importUploadBtn.textContent = 'Uploading...';
+            try {
+                const data = await uploadFile(file, 'subject');
+                closeSubjectModal('subjectImportModal');
+
+                if (data && data.status === 'conflict') {
+                    reloadAfterConflictResolve = true;
+                    showUploadConflicts('subject', file, data);
+                    return;
+                }
+
+                location.reload();
+            } catch (err) {
+                alert('Upload failed: ' + (err && err.message ? err.message : String(err)));
+            } finally {
+                importUploadBtn.disabled = false;
+                importUploadBtn.textContent = 'Upload';
+            }
+        });
+    }
+
+    // -------- Add Subject Modal --------
+    if (btnAdd) {
+        btnAdd.addEventListener('click', () => {
+            const form = document.getElementById('subjectAddForm');
+            if (form) form.reset();
+            openSubjectModal('subjectAddModal');
+        });
+    }
+
+    ['btnSubjectAddClose', 'btnSubjectAddCancel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => closeSubjectModal('subjectAddModal'));
+    });
+
+    const addForm = document.getElementById('subjectAddForm');
+    if (addForm) {
+        addForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                course_code: (document.getElementById('addSubjectCourseCode') || {}).value || '',
+                name: (document.getElementById('addSubjectName') || {}).value || '',
+                program: (document.getElementById('addSubjectProgram') || {}).value || '',
+                units: Number((document.getElementById('addSubjectUnits') || {}).value || 0),
+                prerequisites: (document.getElementById('addSubjectPrerequisites') || {}).value || '',
+            };
+
+            if (!payload.course_code.trim() || !payload.name.trim() || !payload.program.trim()) {
+                alert('Course Code, Subject Name, and Program are required.');
+                return;
+            }
+
+            const saveBtn = document.getElementById('btnSubjectAddSave');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+            }
+
+            try {
+                const data = await postJson('api/add_subject.php', payload);
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Failed to add subject.');
+                }
+                closeSubjectModal('subjectAddModal');
+                location.reload();
+            } catch (err) {
+                alert('Add failed: ' + (err && err.message ? err.message : String(err)));
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                }
+            }
+        });
+    }
+
+    // -------- View / Edit / Archive Row Actions --------
+    document.querySelectorAll('.subject-action-view').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const s = getSubjectFromDataset(btn);
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            set('viewSubjectCourseCode', s.course_code || '—');
+            set('viewSubjectName', s.name || '—');
+            set('viewSubjectProgram', s.program || '—');
+            set('viewSubjectUnits', String(s.units));
+            set('viewSubjectPrerequisites', (s.prerequisites || '').trim() || 'None');
+            openSubjectModal('subjectViewModal');
+        });
+    });
+
+    ['btnSubjectViewClose', 'btnSubjectViewOk'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => closeSubjectModal('subjectViewModal'));
+    });
+
+    document.querySelectorAll('.subject-action-edit').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const s = getSubjectFromDataset(btn);
+            const idEl = document.getElementById('editSubjectId');
+            const codeEl = document.getElementById('editSubjectCourseCode');
+            const nameEl = document.getElementById('editSubjectName');
+            const programEl = document.getElementById('editSubjectProgram');
+            const unitsEl = document.getElementById('editSubjectUnits');
+            const prereqEl = document.getElementById('editSubjectPrerequisites');
+            if (idEl) idEl.value = String(s.id);
+            if (codeEl) codeEl.value = s.course_code || '';
+            if (nameEl) nameEl.value = s.name || '';
+            if (programEl) programEl.value = s.program || '';
+            if (unitsEl) unitsEl.value = String(s.units || 0);
+            if (prereqEl) prereqEl.value = s.prerequisites || '';
+            openSubjectModal('subjectEditModal');
+        });
+    });
+
+    ['btnSubjectEditClose', 'btnSubjectEditCancel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => closeSubjectModal('subjectEditModal'));
+    });
+
+    const editForm = document.getElementById('subjectEditForm');
+    if (editForm) {
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                id: Number((document.getElementById('editSubjectId') || {}).value || 0),
+                course_code: (document.getElementById('editSubjectCourseCode') || {}).value || '',
+                name: (document.getElementById('editSubjectName') || {}).value || '',
+                program: (document.getElementById('editSubjectProgram') || {}).value || '',
+                units: Number((document.getElementById('editSubjectUnits') || {}).value || 0),
+                prerequisites: (document.getElementById('editSubjectPrerequisites') || {}).value || '',
+            };
+
+            if (!payload.id || !payload.course_code.trim() || !payload.name.trim() || !payload.program.trim()) {
+                alert('ID, Course Code, Subject Name, and Program are required.');
+                return;
+            }
+
+            const saveBtn = document.getElementById('btnSubjectEditSave');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+            }
+
+            try {
+                const data = await postJson('api/update_subject.php', payload);
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Failed to update subject.');
+                }
+                closeSubjectModal('subjectEditModal');
+                location.reload();
+            } catch (err) {
+                alert('Update failed: ' + (err && err.message ? err.message : String(err)));
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                }
+            }
+        });
+    }
+
+    document.querySelectorAll('.subject-action-archive').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = Number(btn.dataset.subjectId || 0);
+            const code = btn.dataset.subjectCourseCode || '';
+            if (!id) return;
+            if (!confirm('Archive this subject?')) return;
+            try {
+                const data = await postJson('api/archive_subject.php', { id });
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Failed to archive subject.');
+                }
+                alert((code ? code + ' ' : '') + 'archived successfully.');
+                location.reload();
+            } catch (err) {
+                alert('Archive failed: ' + (err && err.message ? err.message : String(err)));
+            }
+        });
+    });
+}
 
 // --------------------------------------------------
 // Teachers Page - Modals & Actions
