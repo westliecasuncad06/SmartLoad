@@ -47,6 +47,14 @@ function switchPage(pageName) {
 // --------------------------------------------------
 let currentAssignmentId = null;
 
+// Upload conflict modal state
+let conflictModalState = {
+    type: null,
+    file: null,
+    conflicts: [],
+    rowsInserted: 0,
+};
+
 function openModal(assignmentId) {
     currentAssignmentId = assignmentId || null;
     document.getElementById('overrideModal').classList.remove('hidden');
@@ -73,9 +81,20 @@ function closeHistoryModal() {
     document.getElementById('historyModal').classList.add('hidden');
 }
 
+function openConflictModal() {
+    document.getElementById('conflictModal').classList.remove('hidden');
+}
+
+function closeConflictModal() {
+    document.getElementById('conflictModal').classList.add('hidden');
+    conflictModalState = { type: null, file: null, conflicts: [], rowsInserted: 0 };
+    const tbody = document.getElementById('conflictTableBody');
+    if (tbody) tbody.innerHTML = '';
+}
+
 // Close modals when clicking outside
 document.addEventListener('DOMContentLoaded', function () {
-    ['overrideModal', 'settingsModal', 'historyModal'].forEach(modalId => {
+    ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal'].forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.addEventListener('click', function (e) {
@@ -144,12 +163,16 @@ function handleFile(type, file) {
 
     // Upload to backend
     uploadFile(file, type)
-        .then(() => {
+        .then((data) => {
             zone.classList.add('uploaded');
             status.classList.remove('bg-slate-300');
             status.classList.add('bg-green-500');
             uploadedFiles[type] = true;
             updateUploadSummary();
+
+            if (data && data.status === 'conflict') {
+                showUploadConflicts(type, file, data);
+            }
         })
         .catch(err => {
             // Revert UI on failure
@@ -165,9 +188,15 @@ function handleFile(type, file) {
  * @returns {Promise<object>} The parsed JSON response.
  */
 async function uploadFile(file, type) {
+    let conflictAction = 'detect';
+    if (arguments.length >= 3 && arguments[2] && typeof arguments[2] === 'object') {
+        conflictAction = arguments[2].conflict_action || 'detect';
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', type);
+    formData.append('conflict_action', conflictAction);
 
     const response = await fetch('api/upload.php', {
         method: 'POST',
@@ -176,12 +205,124 @@ async function uploadFile(file, type) {
 
     const data = await response.json();
 
-    if (!response.ok || data.status !== 'success') {
-        throw new Error(data.message || 'Upload failed.');
+    if (!response.ok) {
+        throw new Error((data && data.message) ? data.message : 'Upload failed.');
     }
 
-    alert(type.charAt(0).toUpperCase() + type.slice(1) + ' file uploaded successfully! ' + data.rows_inserted + ' rows inserted.');
-    return data;
+    if (data.status === 'success') {
+        const updatedMsg = (data.rows_updated && data.rows_updated > 0)
+            ? (' ' + data.rows_updated + ' rows updated.')
+            : '';
+
+        if (data.duplicates && Array.isArray(data.duplicates) && data.duplicates.length > 0) {
+            const dupList = data.duplicates.join(', ');
+            alert(
+                'Successfully inserted ' + data.rows_inserted + ' rows.' + updatedMsg +
+                '\n\nHowever, the following entries were skipped because they already exist: ' + dupList
+            );
+        } else {
+            alert('Successfully inserted ' + data.rows_inserted + ' rows!' + updatedMsg);
+        }
+        return data;
+    }
+
+    if (data.status === 'conflict') {
+        alert(
+            type.charAt(0).toUpperCase() + type.slice(1) + ' uploaded with duplicates found.\n\n' +
+            '• ' + (data.rows_inserted || 0) + ' new rows inserted\n' +
+            '• ' + (data.conflict_count || 0) + ' duplicates detected\n\n' +
+            'You can review and choose to update existing records.'
+        );
+        return data;
+    }
+
+    throw new Error(data.message || 'Upload failed.');
+}
+
+function stringifyMini(obj, keys) {
+    if (!obj || typeof obj !== 'object') return '';
+    const parts = [];
+    keys.forEach(k => {
+        if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') {
+            parts.push(k + ': ' + obj[k]);
+        }
+    });
+    return parts.join(' • ');
+}
+
+function showUploadConflicts(type, file, data) {
+    conflictModalState.type = type;
+    conflictModalState.file = file;
+    conflictModalState.conflicts = Array.isArray(data.conflicts) ? data.conflicts : [];
+    conflictModalState.rowsInserted = data.rows_inserted || 0;
+
+    const subtitle = document.getElementById('conflictSubtitle');
+    const summary = document.getElementById('conflictSummary');
+    const tbody = document.getElementById('conflictTableBody');
+    if (!subtitle || !summary || !tbody) return;
+
+    const label = type.charAt(0).toUpperCase() + type.slice(1);
+    subtitle.textContent = label + ' upload found duplicate keys already in the database.';
+    summary.textContent = (conflictModalState.conflicts.length) + ' duplicates • ' + conflictModalState.rowsInserted + ' inserted as new';
+
+    tbody.innerHTML = '';
+
+    const existingKeysByType = {
+        teacher: ['name', 'email', 'type', 'max_units', 'expertise_tags'],
+        subject: ['course_code', 'name', 'program', 'units', 'prerequisites'],
+    };
+
+    const keys = existingKeysByType[type] || [];
+
+    conflictModalState.conflicts.slice(0, 200).forEach((c) => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+
+        const tdKey = document.createElement('td');
+        tdKey.className = 'px-4 py-3 font-medium text-slate-900 whitespace-nowrap';
+        tdKey.textContent = (c.key || 'key') + '=' + (c.value || '');
+
+        const tdExisting = document.createElement('td');
+        tdExisting.className = 'px-4 py-3 text-slate-700';
+        tdExisting.textContent = stringifyMini(c.existing, keys);
+
+        const tdIncoming = document.createElement('td');
+        tdIncoming.className = 'px-4 py-3 text-slate-700';
+        tdIncoming.textContent = stringifyMini(c.incoming, keys);
+
+        tr.appendChild(tdKey);
+        tr.appendChild(tdExisting);
+        tr.appendChild(tdIncoming);
+        tbody.appendChild(tr);
+    });
+
+    openConflictModal();
+}
+
+async function resolveConflictUpdate() {
+    if (!conflictModalState.file || !conflictModalState.type) return;
+
+    const btnUpdate = document.getElementById('conflictUpdateBtn');
+    const btnKeep = document.getElementById('conflictKeepBtn');
+    if (btnUpdate) btnUpdate.disabled = true;
+    if (btnKeep) btnKeep.disabled = true;
+
+    try {
+        const data = await uploadFile(conflictModalState.file, conflictModalState.type, { conflict_action: 'update' });
+        closeConflictModal();
+        // Success alert already shown by uploadFile
+        return data;
+    } catch (err) {
+        alert('Update failed: ' + (err && err.message ? err.message : String(err)));
+    } finally {
+        if (btnUpdate) btnUpdate.disabled = false;
+        if (btnKeep) btnKeep.disabled = false;
+    }
+}
+
+function resolveConflictKeep() {
+    // Keep existing records; we already inserted the non-duplicates.
+    closeConflictModal();
 }
 
 function removeFile(type) {

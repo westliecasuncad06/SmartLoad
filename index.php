@@ -1042,6 +1042,52 @@ try {
         </div>
     </div>
 
+    <!-- MODAL: UPLOAD CONFLICTS -->
+    <div id="conflictModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 transform transition-all">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Upload Conflicts Detected</h2>
+                    <p class="text-sm text-slate-500 mt-0.5" id="conflictSubtitle">Some rows already exist in the database.</p>
+                </div>
+                <button onclick="closeConflictModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between gap-4 flex-wrap">
+                    <div class="text-sm text-slate-700" id="conflictSummary">0 conflicts</div>
+                    <div class="flex items-center gap-2">
+                        <button id="conflictKeepBtn" onclick="resolveConflictKeep()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Keep Existing</button>
+                        <button id="conflictUpdateBtn" onclick="resolveConflictUpdate()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2">
+                            <i class="fas fa-rotate"></i> Update Existing
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-4 border border-slate-200 rounded-lg overflow-hidden">
+                    <div class="max-h-96 overflow-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200">
+                                    <th class="px-4 py-3 text-left text-slate-600 font-semibold">Key</th>
+                                    <th class="px-4 py-3 text-left text-slate-600 font-semibold">Existing (DB)</th>
+                                    <th class="px-4 py-3 text-left text-slate-600 font-semibold">Incoming (File)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="conflictTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-500 mt-3">Tip: Choose “Update Existing” to apply the uploaded values for duplicate keys.</p>
+            </div>
+
+            <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end bg-slate-50 rounded-b-xl">
+                <button onclick="closeConflictModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Application JavaScript -->
     <script src="js/app.js"></script>
 </body>
