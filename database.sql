@@ -50,7 +50,7 @@ CREATE TABLE assignments (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     subject_id INT UNSIGNED NOT NULL,
     teacher_id INT UNSIGNED NOT NULL,
-    status ENUM('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
+    status ENUM('Pending','Approved','Rejected','Manual') NOT NULL DEFAULT 'Pending',
     rationale TEXT DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,

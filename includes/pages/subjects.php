@@ -70,115 +70,33 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <?php
+                    $subjectRows = $pdo->query('SELECT * FROM subjects');
+                    foreach ($subjectRows as $subject):
+                    ?>
                     <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                         <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600"></td>
-                        <td class="px-6 py-4 font-medium text-indigo-600">CS101</td>
-                        <td class="px-6 py-4 font-medium text-slate-900">Web Development</td>
-                        <td class="px-6 py-4 text-slate-600">BS Computer Science</td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium">3</span></td>
-                        <td class="px-6 py-4 text-slate-500 text-xs">None</td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-medium text-xs">JD</div>
-                                <span class="text-slate-700">John Doe</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Assigned</span></td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-center gap-2">
-                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View"><i class="fas fa-eye text-sm"></i></button>
-                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Edit"><i class="fas fa-pen text-sm"></i></button>
-                                <button class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><i class="fas fa-trash text-sm"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600"></td>
-                        <td class="px-6 py-4 font-medium text-indigo-600">IT202</td>
-                        <td class="px-6 py-4 font-medium text-slate-900">Database Systems</td>
-                        <td class="px-6 py-4 text-slate-600">BS Information Technology</td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium">3</span></td>
-                        <td class="px-6 py-4 text-slate-500 text-xs">CS101</td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-medium text-xs">JD</div>
-                                <span class="text-slate-700">John Doe</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Assigned</span></td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-center gap-2">
-                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View"><i class="fas fa-eye text-sm"></i></button>
-                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Edit"><i class="fas fa-pen text-sm"></i></button>
-                                <button class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><i class="fas fa-trash text-sm"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600"></td>
-                        <td class="px-6 py-4 font-medium text-indigo-600">IT204</td>
-                        <td class="px-6 py-4 font-medium text-slate-900">Computer Networking</td>
-                        <td class="px-6 py-4 text-slate-600">BS Information Technology</td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium">3</span></td>
-                        <td class="px-6 py-4 text-slate-500 text-xs">IT102</td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full flex items-center justify-center text-white font-medium text-xs">JS</div>
-                                <span class="text-slate-700">Jane Smith</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Assigned</span></td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-center gap-2">
-                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View"><i class="fas fa-eye text-sm"></i></button>
-                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Edit"><i class="fas fa-pen text-sm"></i></button>
-                                <button class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><i class="fas fa-trash text-sm"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-amber-50/30">
-                        <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600"></td>
-                        <td class="px-6 py-4 font-medium text-indigo-600">PHY101</td>
-                        <td class="px-6 py-4 font-medium text-slate-900">Physics I</td>
-                        <td class="px-6 py-4 text-slate-600">BS Engineering</td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium">3</span></td>
-                        <td class="px-6 py-4 text-slate-500 text-xs">Math101</td>
-                        <td class="px-6 py-4 text-slate-400 italic">Unassigned</td>
+                        <td class="px-6 py-4 font-medium text-indigo-600"><?php echo htmlspecialchars($subject['course_code']); ?></td>
+                        <td class="px-6 py-4 font-medium text-slate-900"><?php echo htmlspecialchars($subject['name']); ?></td>
+                        <td class="px-6 py-4 text-slate-600"><?php echo htmlspecialchars($subject['program']); ?></td>
+                        <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium"><?php echo (int)$subject['units']; ?></span></td>
+                        <td class="px-6 py-4 text-slate-500 text-xs"><?php echo htmlspecialchars($subject['prerequisites'] ?: 'None'); ?></td>
+                        <td class="px-6 py-4 text-slate-400 italic">—</td>
                         <td class="px-6 py-4"><span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Unassigned</span></td>
                         <td class="px-6 py-4">
                             <div class="flex items-center justify-center gap-2">
                                 <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View"><i class="fas fa-eye text-sm"></i></button>
-                                <button class="p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded transition-colors" title="Assign Teacher"><i class="fas fa-user-plus text-sm"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600"></td>
-                        <td class="px-6 py-4 font-medium text-indigo-600">Math101</td>
-                        <td class="px-6 py-4 font-medium text-slate-900">Calculus I</td>
-                        <td class="px-6 py-4 text-slate-600">BS Mathematics</td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium">3</span></td>
-                        <td class="px-6 py-4 text-slate-500 text-xs">None</td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center text-white font-medium text-xs">AT</div>
-                                <span class="text-slate-700">Alan Turing</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Assigned</span></td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-center gap-2">
-                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View"><i class="fas fa-eye text-sm"></i></button>
                                 <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Edit"><i class="fas fa-pen text-sm"></i></button>
                                 <button class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><i class="fas fa-trash text-sm"></i></button>
                             </div>
                         </td>
                     </tr>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
         <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span class="text-sm text-slate-600">Showing 5 of <?php echo (int)$totalSubjects; ?> subjects</span>
+            <span class="text-sm text-slate-600">Showing <?php echo (int)$totalSubjects; ?> of <?php echo (int)$totalSubjects; ?> subjects</span>
             <div class="flex items-center gap-1">
                 <button class="px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50" disabled><i class="fas fa-chevron-left text-xs"></i></button>
                 <button class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg">1</button>
