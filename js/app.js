@@ -479,9 +479,26 @@ document.addEventListener('click', (e) => {
 });
 
 // --------------------------------------------------
-// Load Report CSV Export
+// Load Report Export (CSV & PDF)
 // --------------------------------------------------
-function exportReport(type) {
+function toggleExportMenu(event, type) {
+    event.stopPropagation();
+    ['faculty', 'subject', 'overload'].forEach(t => {
+        const m = document.getElementById('exportMenu-' + t);
+        if (m) m.classList.add('hidden');
+    });
+    const menu = document.getElementById('exportMenu-' + type);
+    if (menu) menu.classList.toggle('hidden');
+}
+
+document.addEventListener('click', () => {
+    ['faculty', 'subject', 'overload'].forEach(t => {
+        const m = document.getElementById('exportMenu-' + t);
+        if (m) m.classList.add('hidden');
+    });
+});
+
+async function exportReport(type, format) {
     const el = document.getElementById('reportData-' + type);
     if (!el) { alert('No report data available.'); return; }
 
@@ -489,41 +506,138 @@ function exportReport(type) {
     try { rows = JSON.parse(el.textContent); } catch (_) { alert('Failed to parse report data.'); return; }
     if (!rows.length) { alert('No data to export.'); return; }
 
-    let csv = '';
+    // Close any open export dropdown
+    ['faculty', 'subject', 'overload'].forEach(t => {
+        const m = document.getElementById('exportMenu-' + t);
+        if (m) m.classList.add('hidden');
+    });
+
     const filenames = { faculty: 'faculty_load_summary', subject: 'subject_assignment_report', overload: 'overload_analysis' };
 
-    if (type === 'faculty') {
-        csv = 'Teacher,Type,Current Units,Max Units,Status,Expertise\n';
-        rows.forEach(r => {
-            const cur = Number(r.current_units), max = Number(r.max_units);
-            const status = cur > max ? 'Overloaded' : (cur === max ? 'At Capacity' : 'Normal');
-            csv += csvRow([r.name, r.type, cur, max, status, r.expertise_tags || '']);
-        });
-    } else if (type === 'subject') {
-        csv = 'Code,Subject,Program,Units,Assigned To,Status\n';
-        rows.forEach(r => {
-            const teacher = r.teacher_name || 'Unassigned';
-            const status = teacher === 'Unassigned' ? 'Unassigned' : (r.assignment_status || 'Assigned');
-            csv += csvRow([r.course_code, r.subject_name, r.program, r.units, teacher, status]);
-        });
-    } else if (type === 'overload') {
-        csv = 'Teacher,Type,Current Units,Max Units,Excess Units\n';
-        rows.forEach(r => {
-            csv += csvRow([r.name, r.type, r.current_units, r.max_units, r.excess_units]);
-        });
-    }
+    if (format === 'csv') {
+        let csv = '';
+        if (type === 'faculty') {
+            csv = 'Teacher,Type,Current Units,Max Units,Status,Expertise\n';
+            rows.forEach(r => {
+                const cur = Number(r.current_units), max = Number(r.max_units);
+                const status = cur > max ? 'Overloaded' : (cur === max ? 'At Capacity' : 'Normal');
+                csv += csvRow([r.name, r.type, cur, max, status, r.expertise_tags || '']);
+            });
+        } else if (type === 'subject') {
+            csv = 'Code,Subject,Program,Units,Assigned To,Status\n';
+            rows.forEach(r => {
+                const teacher = r.teacher_name || 'Unassigned';
+                const status = teacher === 'Unassigned' ? 'Unassigned' : (r.assignment_status || 'Assigned');
+                csv += csvRow([r.course_code, r.subject_name, r.program, r.units, teacher, status]);
+            });
+        } else if (type === 'overload') {
+            csv = 'Teacher,Type,Current Units,Max Units,Excess Units\n';
+            rows.forEach(r => {
+                csv += csvRow([r.name, r.type, r.current_units, r.max_units, r.excess_units]);
+            });
+        }
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (filenames[type] || 'report') + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (filenames[type] || 'report') + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    } else if (format === 'pdf') {
+        try {
+            await ensurePdfLibrariesLoaded();
+        } catch (_) {
+            alert('Unable to load PDF export library. Please check your internet connection and try again.');
+            return;
+        }
+
+        const titles = { faculty: 'Faculty Load Summary', subject: 'Subject Assignment Report', overload: 'Overload Analysis' };
+        const { jsPDF } = window.jspdf;
+        const isWide = type === 'subject';
+        const doc = new jsPDF({ orientation: isWide ? 'landscape' : 'portrait', unit: 'pt', format: 'a4' });
+
+        let headers = [];
+        let body = [];
+
+        if (type === 'faculty') {
+            headers = ['Teacher', 'Type', 'Current Units', 'Max Units', 'Status', 'Expertise'];
+            body = rows.map(r => {
+                const cur = Number(r.current_units);
+                const max = Number(r.max_units);
+                const status = cur > max ? 'Overloaded' : (cur === max ? 'At Capacity' : 'Normal');
+                return [toText(r.name), toText(r.type), cur, max, status, toText(r.expertise_tags || 'N/A')];
+            });
+        } else if (type === 'subject') {
+            headers = ['Code', 'Subject', 'Program', 'Units', 'Assigned To', 'Status'];
+            body = rows.map(r => {
+                const teacher = r.teacher_name || 'Unassigned';
+                const status = teacher === 'Unassigned' ? 'Unassigned' : (r.assignment_status || 'Assigned');
+                return [toText(r.course_code), toText(r.subject_name), toText(r.program), Number(r.units), toText(teacher), toText(status)];
+            });
+        } else if (type === 'overload') {
+            headers = ['Teacher', 'Type', 'Current Units', 'Max Units', 'Excess Units'];
+            body = rows.map(r => [toText(r.name), toText(r.type), Number(r.current_units), Number(r.max_units), '+' + Number(r.excess_units)]);
+        }
+
+        doc.setFontSize(16);
+        doc.text(titles[type] || 'Report', 40, 40);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text('SmartLoad - Generated ' + new Date().toLocaleString(), 40, 58);
+
+        doc.autoTable({
+            head: [headers],
+            body: body,
+            startY: 72,
+            styles: { fontSize: 9, cellPadding: 6, textColor: [30, 41, 59] },
+            headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            margin: { left: 40, right: 40 }
+        });
+
+        doc.save((filenames[type] || 'report') + '.pdf');
+    }
+}
+
+let pdfLibPromise = null;
+
+function ensurePdfLibrariesLoaded() {
+    if (window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable) {
+        return Promise.resolve();
+    }
+    if (pdfLibPromise) return pdfLibPromise;
+
+    const loadScript = (src) => new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+
+    pdfLibPromise = (async () => {
+        if (!(window.jspdf && window.jspdf.jsPDF)) {
+            await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+        }
+        if (!(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable)) {
+            await loadScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js');
+        }
+    })().catch((err) => {
+        pdfLibPromise = null;
+        throw err;
+    });
+
+    return pdfLibPromise;
 }
 
 function csvRow(fields) {
     return fields.map(f => '"' + String(f).replace(/"/g, '""') + '"').join(',') + '\n';
+}
+
+function toText(value) {
+    return value === null || value === undefined ? '' : String(value);
 }

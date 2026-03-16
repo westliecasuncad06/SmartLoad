@@ -15,7 +15,7 @@
 
     <!-- Report Types -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
             <div class="p-6">
                 <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4"><i class="fas fa-users text-indigo-600 text-xl"></i></div>
                 <h3 class="text-lg font-semibold text-slate-900">Faculty Load Summary</h3>
@@ -24,12 +24,18 @@
                     <span class="text-xs text-slate-400"><?= (int)$totalTeachers ?> teachers</span>
                     <div class="flex items-center gap-2">
                         <button onclick="openReportModal('faculty')" class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"><i class="fas fa-eye mr-1"></i>View</button>
-                        <button onclick="exportReport('faculty')" class="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"><i class="fas fa-download mr-1"></i>Export</button>
+                        <div class="relative inline-block">
+                            <button onclick="toggleExportMenu(event,'faculty')" class="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1"><i class="fas fa-download"></i> Export <i class="fas fa-chevron-down text-[9px]"></i></button>
+                            <div id="exportMenu-faculty" class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                                <button onclick="exportReport('faculty','csv')" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100"><i class="fas fa-file-csv text-green-600 w-4"></i>Export as CSV</button>
+                                <button onclick="exportReport('faculty','pdf')" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"><i class="fas fa-file-pdf text-red-500 w-4"></i>Export as PDF</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
             <div class="p-6">
                 <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4"><i class="fas fa-book-open text-blue-600 text-xl"></i></div>
                 <h3 class="text-lg font-semibold text-slate-900">Subject Assignment Report</h3>
@@ -38,12 +44,18 @@
                     <span class="text-xs text-slate-400"><?= (int)$totalSubjects ?> subjects</span>
                     <div class="flex items-center gap-2">
                         <button onclick="openReportModal('subject')" class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"><i class="fas fa-eye mr-1"></i>View</button>
-                        <button onclick="exportReport('subject')" class="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"><i class="fas fa-download mr-1"></i>Export</button>
+                        <div class="relative inline-block">
+                            <button onclick="toggleExportMenu(event,'subject')" class="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1"><i class="fas fa-download"></i> Export <i class="fas fa-chevron-down text-[9px]"></i></button>
+                            <div id="exportMenu-subject" class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                                <button onclick="exportReport('subject','csv')" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100"><i class="fas fa-file-csv text-green-600 w-4"></i>Export as CSV</button>
+                                <button onclick="exportReport('subject','pdf')" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"><i class="fas fa-file-pdf text-red-500 w-4"></i>Export as PDF</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
             <div class="p-6">
                 <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mb-4"><i class="fas fa-triangle-exclamation text-amber-600 text-xl"></i></div>
                 <h3 class="text-lg font-semibold text-slate-900">Overload Analysis</h3>
@@ -52,7 +64,13 @@
                     <span class="text-xs text-red-500 font-medium"><?= (int)$overloadCount ?> overloaded</span>
                     <div class="flex items-center gap-2">
                         <button onclick="openReportModal('overload')" class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"><i class="fas fa-eye mr-1"></i>View</button>
-                        <button onclick="exportReport('overload')" class="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"><i class="fas fa-download mr-1"></i>Export</button>
+                        <div class="relative inline-block">
+                            <button onclick="toggleExportMenu(event,'overload')" class="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1"><i class="fas fa-download"></i> Export <i class="fas fa-chevron-down text-[9px]"></i></button>
+                            <div id="exportMenu-overload" class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                                <button onclick="exportReport('overload','csv')" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100"><i class="fas fa-file-csv text-green-600 w-4"></i>Export as CSV</button>
+                                <button onclick="exportReport('overload','pdf')" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"><i class="fas fa-file-pdf text-red-500 w-4"></i>Export as PDF</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -182,7 +200,8 @@
             </table>
         </div>
         <div class="px-6 py-3 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-xl">
-            <button onclick="exportReport('faculty')" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"><i class="fas fa-download mr-1"></i>Export CSV</button>
+            <button onclick="exportReport('faculty','csv')" class="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1.5"><i class="fas fa-file-csv"></i>CSV</button>
+            <button onclick="exportReport('faculty','pdf')" class="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-1.5"><i class="fas fa-file-pdf"></i>PDF</button>
             <button onclick="closeReportModal('faculty')" class="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors">Close</button>
         </div>
     </div>
@@ -233,7 +252,8 @@
             </table>
         </div>
         <div class="px-6 py-3 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-xl">
-            <button onclick="exportReport('subject')" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"><i class="fas fa-download mr-1"></i>Export CSV</button>
+            <button onclick="exportReport('subject','csv')" class="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1.5"><i class="fas fa-file-csv"></i>CSV</button>
+            <button onclick="exportReport('subject','pdf')" class="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-1.5"><i class="fas fa-file-pdf"></i>PDF</button>
             <button onclick="closeReportModal('subject')" class="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors">Close</button>
         </div>
     </div>
@@ -278,7 +298,8 @@
             </table>
         </div>
         <div class="px-6 py-3 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-xl">
-            <button onclick="exportReport('overload')" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"><i class="fas fa-download mr-1"></i>Export CSV</button>
+            <button onclick="exportReport('overload','csv')" class="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1.5"><i class="fas fa-file-csv"></i>CSV</button>
+            <button onclick="exportReport('overload','pdf')" class="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-1.5"><i class="fas fa-file-pdf"></i>PDF</button>
             <button onclick="closeReportModal('overload')" class="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors">Close</button>
         </div>
     </div>
