@@ -19,11 +19,11 @@
         <div class="flex flex-wrap items-end gap-3">
             <div class="flex flex-wrap items-center gap-2">
                 <label class="text-sm text-slate-600">Date Range:</label>
-                <input type="date" value="2026-03-01" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <input id="auditFilterDateFrom" type="date" value="2026-03-01" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <span class="text-slate-400">to</span>
-                <input type="date" value="2026-03-16" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <input id="auditFilterDateTo" type="date" value="2026-03-16" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
-            <select class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <select id="auditFilterType" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <option>All Activity Types</option>
                 <option>Schedule Generated</option>
                 <option>Manual Override</option>
@@ -31,12 +31,12 @@
                 <option>Settings Changed</option>
                 <option>Warnings</option>
             </select>
-            <select class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <select id="auditFilterUser" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <option>All Users</option>
                 <option>Program Chair</option>
                 <option>System</option>
             </select>
-            <button class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"><i class="fas fa-filter mr-2"></i>Apply Filters</button>
+            <button id="auditApplyFiltersBtn" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"><i class="fas fa-filter mr-2"></i>Apply Filters</button>
         </div>
     </div>
 
@@ -59,7 +59,7 @@
                 <p class="text-sm">No audit log entries yet.</p>
             </div>
             <?php endif; ?>
-            <?php foreach ($auditRows as $log):
+            <?php foreach ($auditRows as $index => $log):
                 $actionType = $log['action_type'];
                 switch ($actionType) {
                     case 'Schedule Generation':
@@ -101,7 +101,7 @@
                 }
                 $formattedDate = date('M j, Y, g:i A', strtotime($log['created_at']));
             ?>
-            <div class="audit-log-item px-6 py-4 flex items-start gap-4 hover:bg-slate-50 transition-colors">
+            <div class="audit-log-item px-6 py-4 flex items-start gap-4 hover:bg-slate-50 transition-colors" data-log-index="<?php echo (int) $index; ?>" data-created-at="<?php echo htmlspecialchars((string) $log['created_at'], ENT_QUOTES, 'UTF-8'); ?>" data-action-type="<?php echo htmlspecialchars((string) $actionType, ENT_QUOTES, 'UTF-8'); ?>" data-user="<?php echo htmlspecialchars((string) ($log['user'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="w-10 h-10 <?php echo $iconBg; ?> rounded-full flex items-center justify-center flex-shrink-0"><i class="<?php echo $iconClass; ?>"></i></div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
@@ -114,7 +114,7 @@
                         <span><i class="fas fa-clock mr-1"></i><?php echo $formattedDate; ?></span>
                     </div>
                 </div>
-                <button class="px-3 py-1.5 text-xs text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors">Details</button>
+                <button type="button" class="audit-detail-btn px-3 py-1.5 text-xs text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors">Details</button>
             </div>
             <?php endforeach; ?>
         </div>
@@ -131,5 +131,50 @@
 
     <!-- Hidden data island for audit log export -->
     <script id="auditLogData" type="application/json"><?= json_encode($auditRows, JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+
+    <div id="auditDetailModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-[70] p-4">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-xs font-semibold tracking-[0.18em] text-slate-400 uppercase">Activity Log Detail</p>
+                    <h3 id="auditDetailTitle" class="text-lg font-semibold text-slate-900 mt-1">Audit Entry</h3>
+                </div>
+                <button type="button" onclick="closeAuditDetailModal()" class="w-9 h-9 rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="px-6 py-5 space-y-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Action Type</p>
+                        <p id="auditDetailActionType" class="mt-1 text-sm font-semibold text-slate-900">-</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Status</p>
+                        <p id="auditDetailStatus" class="mt-1 text-sm font-semibold text-slate-900">-</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">User</p>
+                        <p id="auditDetailUser" class="mt-1 text-sm font-semibold text-slate-900">-</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Date and Time</p>
+                        <p id="auditDetailDate" class="mt-1 text-sm font-semibold text-slate-900">-</p>
+                    </div>
+                </div>
+                <div class="rounded-xl bg-white border border-slate-200 p-4">
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Description</p>
+                    <p id="auditDetailDescription" class="mt-2 text-sm leading-6 text-slate-700 whitespace-pre-wrap">-</p>
+                </div>
+                <div class="rounded-xl bg-white border border-slate-200 p-4">
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Reference</p>
+                    <p id="auditDetailReference" class="mt-2 text-sm text-slate-700">-</p>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+                <button type="button" onclick="closeAuditDetailModal()" class="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 <!-- END AUDIT TRAIL PAGE -->

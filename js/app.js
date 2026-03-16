@@ -130,6 +130,127 @@ function closeSettingsModal() {
     document.getElementById('settingsModal').classList.add('hidden');
 }
 
+function openAuditDetailModal() {
+    const modal = document.getElementById('auditDetailModal');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeAuditDetailModal() {
+    const modal = document.getElementById('auditDetailModal');
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function initAuditTrail() {
+    const listEl = document.getElementById('auditLogList');
+    const applyBtn = document.getElementById('auditApplyFiltersBtn');
+    const dateFromEl = document.getElementById('auditFilterDateFrom');
+    const dateToEl = document.getElementById('auditFilterDateTo');
+    const typeEl = document.getElementById('auditFilterType');
+    const userEl = document.getElementById('auditFilterUser');
+    const modal = document.getElementById('auditDetailModal');
+    const dataEl = document.getElementById('auditLogData');
+
+    if (!listEl || !applyBtn || !dateFromEl || !dateToEl || !typeEl || !userEl || !dataEl) return;
+
+    let logs = [];
+    try {
+        logs = JSON.parse(dataEl.textContent || '[]');
+    } catch (_) {
+        logs = [];
+    }
+
+    const items = Array.from(listEl.querySelectorAll('.audit-log-item'));
+
+    const normalizeActivityType = (value) => {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (!normalized || normalized === 'all activity types') return '';
+        if (normalized === 'schedule generated') return 'schedule generation';
+        if (normalized === 'warnings') return 'overload warning';
+        return normalized;
+    };
+
+    const setDetailText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value || '—';
+    };
+
+    const openAuditLogDetail = (index) => {
+        const log = logs[index];
+        if (!log) return;
+
+        const createdAt = log.created_at ? new Date(log.created_at) : null;
+        const formattedDate = createdAt && !Number.isNaN(createdAt.getTime())
+            ? createdAt.toLocaleString()
+            : '—';
+
+        setDetailText('auditDetailTitle', log.action_type || 'Audit Entry');
+        setDetailText('auditDetailActionType', log.action_type || '—');
+        setDetailText('auditDetailStatus', log.action_type || 'Activity');
+        setDetailText('auditDetailUser', log.user || 'System');
+        setDetailText('auditDetailDate', formattedDate);
+        setDetailText('auditDetailDescription', log.description || 'No description available.');
+        setDetailText('auditDetailReference', log.id ? 'Log ID #' + log.id : 'No reference available.');
+        openAuditDetailModal();
+    };
+
+    items.forEach((item, index) => {
+        item.dataset.logIndex = String(index);
+        const btn = item.querySelector('.audit-detail-btn');
+        if (!btn) return;
+
+        btn.addEventListener('click', () => openAuditLogDetail(index));
+    });
+
+    const applyAuditFilters = () => {
+        const fromDate = dateFromEl.value ? new Date(dateFromEl.value + 'T00:00:00') : null;
+        const toDate = dateToEl.value ? new Date(dateToEl.value + 'T23:59:59') : null;
+        const actionFilter = normalizeActivityType(typeEl.value);
+        const userFilter = String(userEl.value || '').trim().toLowerCase();
+        const matchAllUsers = !userFilter || userFilter === 'all users';
+
+        items.forEach((item) => {
+            const createdAtValue = item.dataset.createdAt || '';
+            const itemDate = createdAtValue ? new Date(createdAtValue.replace(' ', 'T')) : null;
+            const itemAction = String(item.dataset.actionType || '').trim().toLowerCase();
+            const itemUser = String(item.dataset.user || '').trim().toLowerCase();
+
+            const matchesFromDate = !fromDate || (itemDate && itemDate >= fromDate);
+            const matchesToDate = !toDate || (itemDate && itemDate <= toDate);
+            const matchesType = !actionFilter || itemAction === actionFilter;
+            const matchesUser = matchAllUsers || itemUser === userFilter;
+
+            item.dataset.filterHidden = matchesFromDate && matchesToDate && matchesType && matchesUser ? '0' : '1';
+        });
+
+        refreshSmartPagination('audit');
+    };
+
+    applyBtn.addEventListener('click', applyAuditFilters);
+
+    [dateFromEl, dateToEl, typeEl, userEl].forEach((el) => {
+        el.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                applyAuditFilters();
+            }
+        });
+    });
+
+    if (modal) {
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeAuditDetailModal();
+            }
+        });
+    }
+}
+
 function initPolicySettingsForm() {
     const expertiseSlider = document.getElementById('policyExpertiseWeight');
     const availabilitySlider = document.getElementById('policyAvailabilityWeight');
@@ -361,6 +482,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize pagination (Dashboard / Teachers / Subjects / Audit Trail)
     initSmartPagination();
+
+    // Initialize audit trail actions (details + filters)
+    initAuditTrail();
 
     // Initialize Predictive HR Insights (Load Reports)
     initPredictiveHrInsights();
@@ -1312,7 +1436,7 @@ function initSmartPagination() {
         pageSizeEl: null,
         defaultPageSize: 10,
         label: 'entries',
-        isItemFilteredOut: null,
+        isItemFilteredOut: (item) => String(item.dataset.filterHidden || '0') === '1',
     });
 }
 
