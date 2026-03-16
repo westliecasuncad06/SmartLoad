@@ -18,6 +18,97 @@ try {
     $overloadCount    = 0;
     $recentLogs       = [];
 }
+
+// Fetch load assignment report data (teachers with assignments + unassigned subjects)
+try {
+    $assignStmt = $pdo->query("
+        SELECT t.id AS teacher_id, t.name AS teacher_name, t.type AS teacher_type,
+               t.expertise_tags, t.current_units, t.max_units,
+               a.id AS assignment_id, a.status AS assignment_status,
+               a.rationale, a.created_at AS assigned_at,
+               sub.id AS subject_id, sub.course_code, sub.name AS subject_name,
+               sub.units AS subject_units, sub.prerequisites
+        FROM assignments a
+        JOIN teachers t ON a.teacher_id = t.id
+        JOIN subjects sub ON a.subject_id = sub.id
+        ORDER BY t.name ASC, sub.course_code ASC
+    ");
+    $assignRows = $assignStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $teacherAssignments = [];
+    foreach ($assignRows as $row) {
+        $tid = (int)$row['teacher_id'];
+        if (!isset($teacherAssignments[$tid])) {
+            $teacherAssignments[$tid] = [
+                'teacher_id'     => $tid,
+                'teacher_name'   => $row['teacher_name'],
+                'teacher_type'   => $row['teacher_type'],
+                'expertise_tags' => $row['expertise_tags'],
+                'current_units'  => (int)$row['current_units'],
+                'max_units'      => (int)$row['max_units'],
+                'subjects'       => [],
+            ];
+        }
+        $teacherAssignments[$tid]['subjects'][] = [
+            'assignment_id'     => (int)$row['assignment_id'],
+            'assignment_status' => $row['assignment_status'],
+            'rationale'         => $row['rationale'],
+            'assigned_at'       => $row['assigned_at'],
+            'subject_id'        => (int)$row['subject_id'],
+            'course_code'       => $row['course_code'],
+            'subject_name'      => $row['subject_name'],
+            'subject_units'     => (int)$row['subject_units'],
+            'prerequisites'     => $row['prerequisites'],
+        ];
+    }
+
+    $schedBySubject     = [];
+    $assignedSubjectIds = array_unique(array_column($assignRows, 'subject_id'));
+    if (!empty($assignedSubjectIds)) {
+        $ph       = implode(',', array_fill(0, count($assignedSubjectIds), '?'));
+        $schedStmt = $pdo->prepare("SELECT subject_id, day_of_week, start_time FROM schedules WHERE subject_id IN ($ph) ORDER BY start_time, day_of_week");
+        $schedStmt->execute($assignedSubjectIds);
+        foreach ($schedStmt->fetchAll(PDO::FETCH_ASSOC) as $sr) {
+            $schedBySubject[(int)$sr['subject_id']][] = $sr;
+        }
+    }
+
+    $unassignedStmt = $pdo->query("
+        SELECT sub.id, sub.course_code, sub.name, sub.units, sub.prerequisites
+        FROM subjects sub
+        LEFT JOIN assignments a ON a.subject_id = sub.id
+        WHERE a.id IS NULL
+    ");
+    $unassignedSubjects = $unassignedStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $unassignedSchedBySubject = [];
+    if (!empty($unassignedSubjects)) {
+        $unassignedIds        = array_column($unassignedSubjects, 'id');
+        $ph2                  = implode(',', array_fill(0, count($unassignedIds), '?'));
+        $unassignedSchedStmt  = $pdo->prepare("SELECT subject_id, day_of_week, start_time FROM schedules WHERE subject_id IN ($ph2) ORDER BY start_time, day_of_week");
+        $unassignedSchedStmt->execute($unassignedIds);
+        foreach ($unassignedSchedStmt->fetchAll(PDO::FETCH_ASSOC) as $sr) {
+            $unassignedSchedBySubject[(int)$sr['subject_id']][] = $sr;
+        }
+    }
+} catch (PDOException $e) {
+    $teacherAssignments       = [];
+    $unassignedSubjects       = [];
+    $schedBySubject           = [];
+    $unassignedSchedBySubject = [];
+}
+
+function formatSubjectSchedules(array $schedules): array {
+    $byTime = [];
+    foreach ($schedules as $s) {
+        $byTime[$s['start_time']][] = substr($s['day_of_week'], 0, 3);
+    }
+    $result = [];
+    foreach ($byTime as $time => $days) {
+        $result[] = implode('/', array_unique($days)) . ' ' . date('g:i A', strtotime($time));
+    }
+    return $result;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -427,244 +518,169 @@ try {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Row 1: Expertise Match -->
-                                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <?php
+                                    $avatarGradients = [
+                                        'from-blue-400 to-indigo-500',
+                                        'from-pink-400 to-rose-500',
+                                        'from-emerald-400 to-teal-500',
+                                        'from-amber-400 to-orange-500',
+                                        'from-violet-400 to-purple-500',
+                                        'from-cyan-400 to-sky-500',
+                                        'from-fuchsia-400 to-pink-500',
+                                        'from-lime-400 to-green-500',
+                                    ];
+                                    $totalReportRows = count($teacherAssignments) + count($unassignedSubjects);
+                                    if ($totalReportRows === 0):
+                                    ?>
+                                    <tr>
+                                        <td colspan="9" class="px-6 py-16 text-center">
+                                            <div class="flex flex-col items-center gap-3">
+                                                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+                                                    <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+                                                </div>
+                                                <p class="text-lg font-semibold text-slate-600">No load assignments yet</p>
+                                                <p class="text-sm text-slate-400 max-w-sm">Upload teacher profiles, subject catalog, and schedules, then generate a schedule to see load assignments here.</p>
+                                                <button onclick="document.getElementById('teacherUpload').click()" class="mt-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                                                    <i class="fas fa-bolt"></i> Get Started
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <?php else: ?>
+
+                                    <?php $taIdx = 0; foreach ($teacherAssignments as $ta):
+                                        $initials = implode('', array_map(fn($w) => mb_strtoupper(mb_substr($w, 0, 1)), explode(' ', trim($ta['teacher_name']))));
+                                        $isOverload = $ta['current_units'] > $ta['max_units'];
+                                        $isAtMax    = $ta['current_units'] === $ta['max_units'];
+                                        $hasManual  = false;
+                                        foreach ($ta['subjects'] as $s) {
+                                            if ($s['assignment_status'] === 'Manual') { $hasManual = true; break; }
+                                        }
+                                        if ($hasManual) {
+                                            $statusLabel       = 'Manual';
+                                            $statusClass       = 'bg-purple-100 text-purple-800';
+                                            $statusIcon        = 'fa-user-pen';
+                                            $rowBg             = 'bg-purple-50/30';
+                                            $rationaleIcon     = 'fas fa-user-pen text-purple-500';
+                                            $rationaleTitleCls = 'font-medium text-purple-600';
+                                            $rationaleTitleTxt = 'Manual Override';
+                                        } elseif ($isOverload) {
+                                            $statusLabel       = 'Overload';
+                                            $statusClass       = 'bg-red-100 text-red-800';
+                                            $statusIcon        = 'fa-triangle-exclamation';
+                                            $rowBg             = 'bg-red-50/30';
+                                            $rationaleIcon     = 'fas fa-brain text-indigo-500';
+                                            $rationaleTitleCls = 'font-medium text-indigo-600';
+                                            $rationaleTitleTxt = 'Expertise Match';
+                                        } else {
+                                            $statusLabel       = 'Optimal';
+                                            $statusClass       = 'bg-green-100 text-green-800';
+                                            $statusIcon        = 'fa-circle-check';
+                                            $rowBg             = '';
+                                            $rationaleIcon     = 'fas fa-brain text-indigo-500';
+                                            $rationaleTitleCls = 'font-medium text-indigo-600';
+                                            $rationaleTitleTxt = 'Expertise Match';
+                                        }
+                                        $pct      = $ta['max_units'] > 0 ? min(100, round(($ta['current_units'] / $ta['max_units']) * 100)) : 0;
+                                        $barColor = $isOverload ? 'bg-red-500' : ($isAtMax ? 'bg-amber-500' : 'bg-green-500');
+                                        $unitsCls  = $isOverload ? 'text-red-600' : 'text-slate-900';
+                                        $gradient  = $avatarGradients[$taIdx % count($avatarGradients)];
+                                        $taIdx++;
+                                        $firstSubject   = $ta['subjects'][0];
+                                        $rationaleBody  = $firstSubject['rationale'] ?? '';
+                                        if (empty($rationaleBody)) {
+                                            if ($hasManual) {
+                                                $rationaleBody = 'Manually assigned by Program Chair';
+                                                if (!empty($firstSubject['assigned_at'])) {
+                                                    $rationaleBody .= ' on ' . date('m/d/Y', strtotime($firstSubject['assigned_at']));
+                                                }
+                                            } elseif ($isOverload) {
+                                                $rationaleBody = 'Exceeds ' . $ta['max_units'] . ' unit policy threshold';
+                                            } else {
+                                                $rationaleBody = 'Assigned based on expertise and availability';
+                                            }
+                                        }
+                                    ?>
+                                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors <?= $rowBg ?>">
                                         <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"></td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-3">
-                                                <div class="w-9 h-9 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-medium text-sm">JD</div>
+                                                <div class="w-9 h-9 bg-gradient-to-br <?= htmlspecialchars($gradient) ?> rounded-full flex items-center justify-center text-white font-medium text-sm"><?= htmlspecialchars($initials) ?></div>
                                                 <div>
-                                                    <p class="font-medium text-slate-900">John Doe</p>
-                                                    <p class="text-xs text-slate-500">Full-time Faculty</p>
+                                                    <p class="font-medium text-slate-900"><?= htmlspecialchars($ta['teacher_name']) ?></p>
+                                                    <p class="text-xs text-slate-500"><?= htmlspecialchars($ta['teacher_type']) ?> Faculty</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex flex-wrap gap-1">
-                                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">PHP</span>
-                                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">MySQL</span>
-                                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">Web Dev</span>
+                                                <?php if (!empty($ta['expertise_tags'])):
+                                                    foreach (array_slice(explode(',', $ta['expertise_tags']), 0, 3) as $tag): ?>
+                                                    <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs"><?= htmlspecialchars(trim($tag)) ?></span>
+                                                <?php endforeach; else: ?>
+                                                    <span class="text-slate-400 text-xs">—</span>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="space-y-1">
-                                                <p class="text-slate-900 font-medium">CS101 - Web Development</p>
-                                                <p class="text-slate-600 text-xs">IT202 - Database Systems</p>
+                                                <?php foreach ($ta['subjects'] as $si => $s): ?>
+                                                <p class="<?= $si === 0 ? 'text-slate-900 font-medium' : 'text-slate-600 text-xs' ?>"><?= htmlspecialchars($s['course_code'] . ' - ' . $s['subject_name']) ?></p>
+                                                <?php endforeach; ?>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 text-slate-700">
                                             <div class="space-y-1 text-xs">
-                                                <p>Mon/Wed 9:00 AM</p>
-                                                <p>Tue/Thu 10:30 AM</p>
+                                                <?php foreach ($ta['subjects'] as $s):
+                                                    $schedLines = !empty($schedBySubject[$s['subject_id']]) ? formatSubjectSchedules($schedBySubject[$s['subject_id']]) : [];
+                                                    foreach ($schedLines as $line): ?>
+                                                    <p><?= htmlspecialchars($line) ?></p>
+                                                    <?php endforeach;
+                                                    if (empty($schedLines)): ?>
+                                                    <p class="text-slate-400">—</p>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-2">
-                                                <span class="font-semibold text-slate-900">15</span>
+                                                <span class="font-semibold <?= $unitsCls ?>"><?= $ta['current_units'] ?></span>
                                                 <div class="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                                    <div class="w-10/12 h-full bg-green-500 rounded-full"></div>
+                                                    <div class="<?= $barColor ?> h-full rounded-full" style="width:<?= $pct ?>%"></div>
                                                 </div>
+                                                <?php if ($isOverload): ?><i class="fas fa-triangle-exclamation text-red-500 text-xs"></i><?php endif; ?>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-start gap-2">
-                                                <i class="fas fa-brain text-indigo-500 mt-0.5 text-xs"></i>
+                                                <i class="<?= $rationaleIcon ?> mt-0.5 text-xs"></i>
                                                 <span class="text-xs text-slate-600 leading-relaxed">
-                                                    <span class="font-medium text-indigo-600">Expertise Match (95%)</span><br>
-                                                    5 years PHP experience; Available MWF morning
+                                                    <span class="<?= $rationaleTitleCls ?>"><?= htmlspecialchars($rationaleTitleTxt) ?></span><br>
+                                                    <?php if ($isOverload): ?>
+                                                    <span class="text-red-600 font-medium"><?= htmlspecialchars($rationaleBody) ?></span>
+                                                    <?php else: ?>
+                                                    <?= htmlspecialchars($rationaleBody) ?>
+                                                    <?php endif; ?>
                                                 </span>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                <i class="fas fa-circle-check text-[10px]"></i> Optimal
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $statusClass ?>">
+                                                <i class="fas <?= $statusIcon ?> text-[10px]"></i> <?= $statusLabel ?>
                                             </span>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center justify-center gap-2">
                                                 <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View Details"><i class="fas fa-eye text-sm"></i></button>
-                                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onclick="openModal()" title="Manual Override"><i class="fas fa-pen-to-square text-sm"></i></button>
+                                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onclick="openModal(<?= $firstSubject['assignment_id'] ?>)" title="Manual Override"><i class="fas fa-pen-to-square text-sm"></i></button>
                                             </div>
                                         </td>
                                     </tr>
-                                    <!-- Row 2: Overload Flag -->
-                                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-red-50/30">
-                                        <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"></td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-9 h-9 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full flex items-center justify-center text-white font-medium text-sm">JS</div>
-                                                <div>
-                                                    <p class="font-medium text-slate-900">Jane Smith</p>
-                                                    <p class="text-xs text-slate-500">Full-time Faculty</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex flex-wrap gap-1">
-                                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">Networking</span>
-                                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">Security</span>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="space-y-1">
-                                                <p class="text-slate-900 font-medium">IT204 - Networking</p>
-                                                <p class="text-slate-600 text-xs">IT301 - Cybersecurity</p>
-                                                <p class="text-slate-600 text-xs">IT102 - IT Fundamentals</p>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-slate-700">
-                                            <div class="space-y-1 text-xs">
-                                                <p>Tue/Thu 1:00 PM</p>
-                                                <p>Mon/Wed 2:30 PM</p>
-                                                <p>Fri 9:00 AM</p>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-2">
-                                                <span class="font-semibold text-red-600">21</span>
-                                                <div class="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                                    <div class="w-full h-full bg-red-500 rounded-full"></div>
-                                                </div>
-                                                <i class="fas fa-triangle-exclamation text-red-500 text-xs"></i>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-start gap-2">
-                                                <i class="fas fa-brain text-indigo-500 mt-0.5 text-xs"></i>
-                                                <span class="text-xs text-slate-600 leading-relaxed">
-                                                    <span class="font-medium text-indigo-600">Expertise Match (92%)</span><br>
-                                                    <span class="text-red-600 font-medium">Exceeds 18 unit policy threshold</span>
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                <i class="fas fa-triangle-exclamation text-[10px]"></i> Overload
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center justify-center gap-2">
-                                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View Details"><i class="fas fa-eye text-sm"></i></button>
-                                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onclick="openModal()" title="Manual Override"><i class="fas fa-pen-to-square text-sm"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 3: Availability Match -->
-                                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                        <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"></td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-9 h-9 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center text-white font-medium text-sm">AT</div>
-                                                <div>
-                                                    <p class="font-medium text-slate-900">Alan Turing</p>
-                                                    <p class="text-xs text-slate-500">Part-time Faculty</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex flex-wrap gap-1">
-                                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">Mathematics</span>
-                                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">Algorithms</span>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="space-y-1">
-                                                <p class="text-slate-900 font-medium">Math101 - Calculus I</p>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-slate-700">
-                                            <div class="space-y-1 text-xs"><p>Fri 10:00 AM</p></div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-2">
-                                                <span class="font-semibold text-slate-900">12</span>
-                                                <div class="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                                    <div class="w-8/12 h-full bg-green-500 rounded-full"></div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-start gap-2">
-                                                <i class="fas fa-clock text-blue-500 mt-0.5 text-xs"></i>
-                                                <span class="text-xs text-slate-600 leading-relaxed">
-                                                    <span class="font-medium text-blue-600">Availability Match (85%)</span><br>
-                                                    Only available Fridays; Strong math background
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                <i class="fas fa-circle-check text-[10px]"></i> Optimal
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center justify-center gap-2">
-                                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View Details"><i class="fas fa-eye text-sm"></i></button>
-                                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onclick="openModal()" title="Manual Override"><i class="fas fa-pen-to-square text-sm"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 4: Manual Override -->
-                                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-purple-50/30">
-                                        <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"></td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-9 h-9 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center text-white font-medium text-sm">MG</div>
-                                                <div>
-                                                    <p class="font-medium text-slate-900">Maria Garcia</p>
-                                                    <p class="text-xs text-slate-500">Full-time Faculty</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex flex-wrap gap-1">
-                                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">Literature</span>
-                                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">Writing</span>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="space-y-1">
-                                                <p class="text-slate-900 font-medium">ENG102 - Literature</p>
-                                                <p class="text-slate-600 text-xs">ENG201 - Creative Writing</p>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-slate-700">
-                                            <div class="space-y-1 text-xs">
-                                                <p>Mon/Wed 2:00 PM</p>
-                                                <p>Tue/Thu 3:30 PM</p>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-2">
-                                                <span class="font-semibold text-slate-900">18</span>
-                                                <div class="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                                    <div class="w-full h-full bg-amber-500 rounded-full"></div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-start gap-2">
-                                                <i class="fas fa-user-pen text-purple-500 mt-0.5 text-xs"></i>
-                                                <span class="text-xs text-slate-600 leading-relaxed">
-                                                    <span class="font-medium text-purple-600">Manual Override</span><br>
-                                                    Reassigned by Program Chair on 03/15/2026<br>
-                                                    <span class="italic">"Teacher request due to schedule preference"</span>
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                                <i class="fas fa-user-pen text-[10px]"></i> Manual
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center justify-center gap-2">
-                                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View Details"><i class="fas fa-eye text-sm"></i></button>
-                                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onclick="openModal()" title="Manual Override"><i class="fas fa-pen-to-square text-sm"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 5: Unassigned Subject -->
+                                    <?php endforeach; ?>
+
+                                    <?php foreach ($unassignedSubjects as $us):
+                                        $uSchedLines = !empty($unassignedSchedBySubject[(int)$us['id']]) ? formatSubjectSchedules($unassignedSchedBySubject[(int)$us['id']]) : [];
+                                    ?>
                                     <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-amber-50/30">
                                         <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"></td>
                                         <td class="px-6 py-4">
@@ -676,19 +692,24 @@ try {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4"><span class="text-slate-400 text-xs">-</span></td>
+                                        <td class="px-6 py-4"><span class="text-slate-400 text-xs">—</span></td>
                                         <td class="px-6 py-4">
                                             <div class="space-y-1">
-                                                <p class="text-slate-900 font-medium">PHY101 - Physics I</p>
-                                                <p class="text-xs text-amber-600">Prerequisite: Math101</p>
+                                                <p class="text-slate-900 font-medium"><?= htmlspecialchars($us['course_code'] . ' - ' . $us['name']) ?></p>
+                                                <?php if (!empty($us['prerequisites'])): ?>
+                                                <p class="text-xs text-amber-600">Prerequisite: <?= htmlspecialchars($us['prerequisites']) ?></p>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 text-slate-700">
-                                            <div class="space-y-1 text-xs"><p>Mon/Wed 8:00 AM</p></div>
+                                            <div class="space-y-1 text-xs">
+                                                <?php foreach ($uSchedLines as $line): ?><p><?= htmlspecialchars($line) ?></p><?php endforeach; ?>
+                                                <?php if (empty($uSchedLines)): ?><p class="text-slate-400">—</p><?php endif; ?>
+                                            </div>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-2">
-                                                <span class="font-semibold text-slate-400">3</span>
+                                                <span class="font-semibold text-slate-400"><?= (int)$us['units'] ?></span>
                                                 <span class="text-xs text-slate-400">units</span>
                                             </div>
                                         </td>
@@ -697,7 +718,7 @@ try {
                                                 <i class="fas fa-circle-exclamation text-amber-500 mt-0.5 text-xs"></i>
                                                 <span class="text-xs text-amber-600 leading-relaxed">
                                                     <span class="font-medium">No matching teacher found</span><br>
-                                                    No faculty with Physics expertise available at this time slot
+                                                    No faculty with matching expertise available for this subject
                                                 </span>
                                             </div>
                                         </td>
@@ -713,13 +734,16 @@ try {
                                             </div>
                                         </td>
                                     </tr>
+                                    <?php endforeach; ?>
+
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
                         <!-- Pagination -->
                         <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
                             <div class="flex items-center gap-4">
-                                <span class="text-sm text-slate-600">Showing 5 of <?php echo (int)$totalTeachers; ?> entries</span>
+                                <span class="text-sm text-slate-600">Showing <?php echo count($teacherAssignments) + count($unassignedSubjects); ?> entries</span>
                                 <select class="text-sm border border-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                     <option>10 per page</option>
                                     <option>25 per page</option>
