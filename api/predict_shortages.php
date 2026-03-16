@@ -15,9 +15,16 @@ function json_response(int $statusCode, array $payload): void
 
 function table_exists(PDO $pdo, string $tableName): bool
 {
-    $stmt = $pdo->prepare('SHOW TABLES LIKE ?');
+    // MariaDB/MySQL can reject parameter markers in certain SHOW statements.
+    // Use information_schema instead (safe for prepared statements).
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*)
+         FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = ?'
+    );
     $stmt->execute([$tableName]);
-    return (bool) $stmt->fetchColumn();
+    return ((int) $stmt->fetchColumn()) > 0;
 }
 
 /**
@@ -111,7 +118,7 @@ try {
     // Requirement: match expertise_tags against subject name OR program.
     // Active teachers only: is_archived = 0.
     $capacityRows = $pdo->query(
-        'SELECT
+        "SELECT
             s.id AS subject_id,
             COALESCE(SUM(t.max_units), 0) AS total_faculty_capacity
          FROM subjects s
@@ -119,11 +126,11 @@ try {
             ON t.is_archived = 0
            AND t.expertise_tags IS NOT NULL
            AND (
-               t.expertise_tags LIKE CONCAT("%", s.name, "%")
-               OR t.expertise_tags LIKE CONCAT("%", s.program, "%")
+               t.expertise_tags LIKE CONCAT('%', s.name, '%')
+               OR t.expertise_tags LIKE CONCAT('%', s.program, '%')
            )
          WHERE s.is_archived = 0
-         GROUP BY s.id'
+         GROUP BY s.id"
     )->fetchAll(PDO::FETCH_ASSOC);
 
     $capacityBySubject = [];
@@ -175,8 +182,26 @@ try {
             return (int) ($p['sections'] ?? 0);
         }, $series);
 
+        // For the Chart.js forecast card, expose a simplified structure:
+        // - history: last 3 years in UNITS (not sections)
+        // - predicted: next year in UNITS
+        // - capacity: capacity in UNITS
+        $historicalUnitsTrend = array_map(static function (array $p) use ($units): int {
+            $sections = (int) ($p['sections'] ?? 0);
+            return max(0, $sections) * max(0, $units);
+        }, $series);
+
+        $historyLast3 = array_slice($historicalUnitsTrend, -3);
+        // Pad to 3 values for the fixed labels [2024, 2025, 2026]
+        while (count($historyLast3) < 3) {
+            array_unshift($historyLast3, 0);
+        }
+
         $results[] = [
             'subject_name' => (string) ($subjectMeta[$subjectId]['subject_name'] ?? ''),
+            'history' => array_values($historyLast3),
+            'predicted' => $projectedUnitsNeeded,
+            'capacity' => $totalFacultyCapacity,
             'historical_trend' => $historicalTrend,
             'projected_units_needed' => $projectedUnitsNeeded,
             'total_faculty_capacity' => $totalFacultyCapacity,

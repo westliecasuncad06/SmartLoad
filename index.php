@@ -169,9 +169,6 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartLoad - Intelligent Faculty Scheduling</title>
 
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1184,6 +1181,12 @@ try {
             </div>
         </div>
     </div>
+
+    <!-- Tailwind (script) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Application JavaScript -->
     <script src="js/app.js"></script>

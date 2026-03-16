@@ -59,6 +59,15 @@ function switchPage(pageName) {
         selectedPage.classList.remove('hidden');
     }
 
+    // Load Reports - Predictive Analytics chart should render only when visible
+    if (pageName === 'loadreports') {
+        requestAnimationFrame(() => {
+            if (typeof loadPredictiveAnalytics === 'function') {
+                loadPredictiveAnalytics();
+            }
+        });
+    }
+
     // Update navigation active state
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('bg-indigo-600', 'text-white', 'font-medium');
@@ -357,6 +366,117 @@ document.addEventListener('DOMContentLoaded', function () {
 // --------------------------------------------------
 // Load Reports - Predictive HR Insights
 // --------------------------------------------------
+let predictiveChartInstance = null;
+
+async function loadPredictiveAnalytics() {
+    const canvas = document.getElementById('predictiveChart');
+    const insightEl = document.getElementById('predictiveInsight');
+
+    if (!canvas || !insightEl) return;
+
+    insightEl.innerHTML = 'Loading predictions...';
+
+    if (typeof Chart === 'undefined') {
+        insightEl.innerHTML = 'Chart.js is not loaded.';
+        return;
+    }
+
+    try {
+        const url = 'api/predict_shortages.php?v=' + Date.now();
+        const response = await fetch(url, { method: 'GET', cache: 'no-store' });
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok || (payload && payload.status === 'error')) {
+            const msg = payload && payload.message ? payload.message : 'Failed to load predictive analytics data.';
+            throw new Error(msg);
+        }
+
+        if (!Array.isArray(payload) || payload.length === 0) {
+            throw new Error('No predictive analytics data available.');
+        }
+
+        // Use the first subject for now
+        const subject = payload[0] || {};
+        const subjectName = String(subject.subject_name || 'Unknown Subject');
+        const history = Array.isArray(subject.history) ? subject.history.map(v => Number(v)) : [];
+        const predicted = Number(subject.predicted || 0);
+        const capacity = Number(subject.capacity || 0);
+        const hiringRequired = subject.hiring_required === true;
+
+        const labels = ['2024', '2025', '2026', '2027 (Predicted)'];
+        const hist3 = [history[0] ?? 0, history[1] ?? 0, history[2] ?? 0].map(v => Number(v) || 0);
+        const bars = [...hist3, Number(predicted) || 0];
+
+        const indigo = 'rgba(99, 102, 241, 0.85)';
+        const amber = 'rgba(245, 158, 11, 0.85)';
+        const red = 'rgba(239, 68, 68, 0.9)';
+        const barColors = [indigo, indigo, indigo, amber];
+
+        if (predictiveChartInstance) {
+            predictiveChartInstance.destroy();
+            predictiveChartInstance = null;
+        }
+
+        const ctx = canvas.getContext('2d');
+        predictiveChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: subjectName + ' Units',
+                        data: bars,
+                        backgroundColor: barColors,
+                        borderColor: barColors,
+                        borderWidth: 1,
+                    },
+                    {
+                        type: 'line',
+                        label: 'Capacity',
+                        data: [capacity, capacity, capacity, capacity],
+                        borderColor: red,
+                        borderWidth: 2,
+                        borderDash: [6, 6],
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true },
+                    tooltip: { enabled: true },
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 },
+                    }
+                }
+            }
+        });
+
+        if (hiringRequired) {
+            const msg = `⚠️ Shortage Alert: ${subjectName} will require ${predicted} units next year, but you only have ${capacity} units of capacity. Prepare to hire!`;
+            insightEl.innerHTML = '<strong>' + escapeHtml(msg) + '</strong>';
+        } else {
+            const msg = `${subjectName} is within capacity based on current forecast.`;
+            insightEl.innerHTML = escapeHtml(msg);
+        }
+    } catch (err) {
+        if (predictiveChartInstance) {
+            predictiveChartInstance.destroy();
+            predictiveChartInstance = null;
+        }
+
+        insightEl.innerHTML = escapeHtml(err && err.message ? err.message : 'Unable to load predictions.');
+    }
+}
+
 function initPredictiveHrInsights() {
     const container = document.getElementById('predictiveHrInsights');
     if (!container) return;
@@ -425,10 +545,11 @@ function initPredictiveHrInsights() {
 
     setStatus('Loading forecast…');
 
-    fetch('api/predict_shortages.php', { method: 'GET' })
+    const url = 'api/predict_shortages.php?v=' + Date.now();
+    fetch(url, { method: 'GET', cache: 'no-store' })
         .then(async (res) => {
             const data = await res.json().catch(() => null);
-            if (!res.ok) {
+            if (!res.ok || (data && data.status === 'error')) {
                 const msg = data && data.message ? data.message : 'Failed to load forecast.';
                 throw new Error(msg);
             }

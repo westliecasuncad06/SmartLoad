@@ -141,6 +141,27 @@
         </div>
     </div>
 
+    <!-- Predictive Analytics -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200">
+            <h3 class="text-lg font-semibold text-slate-900">Predictive Faculty Demand Forecast</h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div class="relative h-80">
+                        <canvas id="predictiveChart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <div id="predictiveInsight" class="bg-amber-50 text-amber-800 border border-amber-200 rounded-lg p-4 text-sm">
+                        Loading predictions...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Predictive HR Insights -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
