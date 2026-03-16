@@ -2027,12 +2027,258 @@ async function submitOverride(assignmentId) {
 }
 
 // --------------------------------------------------
+// Global Search Functionality - FULLY FUNCTIONAL
+// --------------------------------------------------
+let searchAbortController = null;
+let searchTimeout = null;
+let currentSearchResults = [];
+let selectedResultIndex = -1;
+
+function initializeGlobalSearch() {
+    const searchInput = document.getElementById('globalSearch');
+    const dropdown = document.getElementById('searchResultsDropdown');
+    const resultsList = document.getElementById('searchResultsList');
+    const loadingEl = document.getElementById('searchLoading');
+    const noResultsEl = document.getElementById('searchNoResults');
+
+    if (!searchInput || !dropdown || !resultsList || !loadingEl || !noResultsEl) {
+        console.warn('Global search elements not found');
+        return;
+    }
+
+    // Input handling
+    searchInput.addEventListener('input', debounceSearch);
+    searchInput.addEventListener('focus', () => {
+        if (currentSearchResults.length > 0) {
+            dropdown.classList.remove('hidden');
+        }
+    });
+
+    // Keyboard navigation
+    searchInput.addEventListener('keydown', (e) => {
+        if (!dropdown.classList.contains('hidden')) {
+            handleSearchKeydown(e);
+        } else if (e.key === 'Escape') {
+            searchInput.blur();
+        }
+    });
+
+    // Hide dropdown on outside click
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            hideSearchDropdown();
+        }
+    });
+
+    function debounceSearch() {
+        if (searchTimeout) clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => performGlobalSearch(searchInput.value.trim()), 250);
+    }
+}
+
+async function performGlobalSearch(query) {
+    const searchInput = document.getElementById('globalSearch');
+    const dropdown = document.getElementById('searchResultsDropdown');
+    const resultsList = document.getElementById('searchResultsList');
+    const loadingEl = document.getElementById('searchLoading');
+    const noResultsEl = document.getElementById('searchNoResults');
+
+    if (query.length < 2) {
+        hideSearchDropdown();
+        return;
+    }
+
+    showLoading();
+    
+    // Cancel previous requests
+    if (searchAbortController) {
+        searchAbortController.abort();
+    }
+    searchAbortController = new AbortController();
+
+    try {
+        const [teachersRes, subjectsRes] = await Promise.allSettled([
+            fetch(`api/filter_teachers.php?search=${encodeURIComponent(query)}`, { signal: searchAbortController.signal }),
+            fetch(`api/filter_subjects.php?search=${encodeURIComponent(query)}`, { signal: searchAbortController.signal })
+        ]);
+
+        currentSearchResults = [];
+
+        // Teachers
+        if (teachersRes.status === 'fulfilled' && teachersRes.value.ok) {
+            const teachersData = await teachersRes.value.json();
+            if (teachersData.status === 'success') {
+                currentSearchResults.push(...teachersData.teachers.slice(0, 5).map(t => ({
+                    id: t.id,
+                    type: 'teacher',
+                    title: t.name,
+                    subtitle: t.type + ' • ' + t.expertise_tags || 'No expertise',
+                    data: t
+                })));
+            }
+        }
+
+        // Subjects  
+        if (subjectsRes.status === 'fulfilled' && subjectsRes.value.ok) {
+            const subjectsData = await subjectsRes.value.json();
+            if (subjectsData.status === 'success') {
+                currentSearchResults.push(...subjectsData.subjects.slice(0, 5).map(s => ({
+                    id: s.id,
+                    type: 'subject', 
+                    title: s.course_code + ' - ' + s.name,
+                    subtitle: s.program + ' (' + s.units + ' units)',
+                    data: s
+                })));
+            }
+        }
+
+        renderSearchResults(currentSearchResults);
+
+        // Highlight in dashboard table
+        highlightDashboardResults(query);
+
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error('Search failed:', err);
+            showNoResults();
+        }
+    } finally {
+        hideLoading();
+    }
+
+    function showLoading() {
+        resultsList.innerHTML = '';
+        loadingEl.classList.remove('hidden');
+        noResultsEl.classList.add('hidden');
+        dropdown.classList.remove('hidden');
+    }
+
+    function hideLoading() {
+        loadingEl.classList.add('hidden');
+    }
+
+    function showNoResults() {
+        resultsList.innerHTML = '';
+        noResultsEl.classList.remove('hidden');
+        dropdown.classList.remove('hidden');
+    }
+
+    function renderSearchResults(results) {
+        resultsList.innerHTML = '';
+        if (results.length === 0) {
+            showNoResults();
+            return;
+        }
+
+        noResultsEl.classList.add('hidden');
+        results.forEach((result, index) => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.dataset.index = index;
+            item.dataset.type = result.type;
+            item.dataset.id = result.id;
+            item.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-r ${result.type === 'teacher' ? 'from-indigo-500 to-blue-600' : 'from-emerald-500 to-teal-600'} rounded-lg flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
+                        ${result.type === 'teacher' ? initialsFromName(result.title) : result.title.charAt(0)}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-slate-900 truncate">${escapeHtml(result.title)}</div>
+                        <div class="search-result-type text-indigo-600">${result.type.charAt(0).toUpperCase() + result.type.slice(1)}</div>
+                        <div class="search-result-preview truncate">${escapeHtml(result.subtitle)}</div>
+                    </div>
+                </div>
+            `;
+            item.addEventListener('click', () => selectSearchResult(result));
+            resultsList.appendChild(item);
+        });
+    }
+}
+
+function highlightDashboardResults(query) {
+    const tbody = document.getElementById('dashboardReportTbody');
+    if (!tbody) return;
+
+    // Clear previous highlights
+    tbody.querySelectorAll('.search-highlight-row').forEach(row => {
+        row.classList.remove('search-highlight-row', 'ring-2', 'ring-indigo-500', 'ring-opacity-50');
+    });
+
+    // Highlight matching rows
+    const lowerQuery = query.toLowerCase();
+    tbody.querySelectorAll('tr').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(lowerQuery)) {
+            row.classList.add('search-highlight-row', 'ring-2', 'ring-indigo-500', 'ring-opacity-50');
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+}
+
+function handleSearchKeydown(e) {
+    const resultsList = document.getElementById('searchResultsList');
+    const results = Array.from(resultsList.querySelectorAll('.search-result-item'));
+    
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedResultIndex = Math.min(selectedResultIndex + 1, results.length - 1);
+        updateSelection(results);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedResultIndex = Math.max(selectedResultIndex - 1, -1);
+        updateSelection(results);
+    } else if (e.key === 'Enter' && selectedResultIndex >= 0) {
+        e.preventDefault();
+        const result = currentSearchResults[selectedResultIndex];
+        if (result) selectSearchResult(result);
+    } else if (e.key === 'Escape') {
+        hideSearchDropdown();
+    }
+}
+
+function updateSelection(results) {
+    results.forEach((item, index) => {
+        item.classList.toggle('search-highlight', index === selectedResultIndex);
+    });
+}
+
+function selectSearchResult(result) {
+    hideSearchDropdown();
+    const searchInput = document.getElementById('globalSearch');
+    searchInput.value = result.title;
+
+    // Navigate to relevant page or highlight
+    if (result.type === 'teacher') {
+        switchPage('teachers');
+    } else if (result.type === 'subject') {
+        switchPage('subjects');
+    }
+
+    // Highlight row
+    highlightDashboardResults(result.title);
+}
+
+function hideSearchDropdown() {
+    const dropdown = document.getElementById('searchResultsDropdown');
+    dropdown.classList.add('hidden');
+    selectedResultIndex = -1;
+    currentSearchResults = [];
+}
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', initializeGlobalSearch);
+
+// --------------------------------------------------
 // Keyboard Shortcuts
 // --------------------------------------------------
 document.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        document.getElementById('globalSearch').focus();
+        const searchInput = document.getElementById('globalSearch');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
     }
 });
 

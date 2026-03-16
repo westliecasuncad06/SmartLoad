@@ -28,3 +28,55 @@
 .generating {
     animation: pulse-border 1.5s ease-in-out infinite;
 }
+
+/* Global Search Dropdown */
+#searchResultsDropdown {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    padding: 8px 0;
+}
+
+.search-result-item {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    padding: 12px 16px;
+    border-radius: 0;
+}
+
+.search-result-item:hover {
+    background-color: #f8fafc;
+}
+
+.search-result-item.search-highlight {
+    background-color: #fef3c7;
+    animation: highlight-pulse 0.6s ease-out;
+}
+
+@keyframes highlight-pulse {
+    0% { background-color: #fef3c7; }
+    50% { background-color: #fde68a; }
+    100% { background-color: #fef3c7; }
+}
+
+.search-result-type {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.search-result-preview {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* Hide notification badges */
+.notification,
+.notification-badge,
+.badge-notification,
+[class*="notification"],
+button:has(i.fa-bell),
+.fa-bell,
+i.fa-bell {
+    display: none !important;
+}
