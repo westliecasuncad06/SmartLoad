@@ -109,6 +109,54 @@ function formatSubjectSchedules(array $schedules): array {
     }
     return $result;
 }
+
+// -----------------------------------------------------------
+// Load Reports data
+// -----------------------------------------------------------
+try {
+    // All teachers with load info
+    $reportTeachers = $pdo->query("
+        SELECT id, name, type, current_units, max_units, expertise_tags
+        FROM teachers ORDER BY name ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    // Subjects with assigned teacher
+    $reportSubjects = $pdo->query("
+        SELECT s.id, s.course_code, s.name AS subject_name, s.program, s.units,
+               COALESCE(t.name, 'Unassigned') AS teacher_name, a.status AS assignment_status
+        FROM subjects s
+        LEFT JOIN assignments a ON a.subject_id = s.id
+        LEFT JOIN teachers t ON a.teacher_id = t.id
+        ORDER BY s.course_code ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    // Overloaded teachers
+    $reportOverloaded = $pdo->query("
+        SELECT t.id, t.name, t.type, t.current_units, t.max_units,
+               (t.current_units - t.max_units) AS excess_units
+        FROM teachers t
+        WHERE t.current_units > t.max_units
+        ORDER BY excess_units DESC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    // Quick stats
+    $totalMaxUnits   = $pdo->query("SELECT COALESCE(SUM(max_units),0) FROM teachers")->fetchColumn();
+    $totalCurrUnits  = $pdo->query("SELECT COALESCE(SUM(current_units),0) FROM teachers")->fetchColumn();
+    $atCapacityCount = $pdo->query("SELECT COUNT(*) FROM teachers WHERE current_units = max_units")->fetchColumn();
+    $avgLoad         = $totalTeachers > 0 ? round($totalCurrUnits / $totalTeachers, 1) : 0;
+    $availableUnits  = $totalMaxUnits - $totalCurrUnits;
+    $utilization     = $totalMaxUnits > 0 ? round(($totalCurrUnits / $totalMaxUnits) * 100, 1) : 0;
+} catch (PDOException $e) {
+    $reportTeachers  = [];
+    $reportSubjects  = [];
+    $reportOverloaded = [];
+    $totalMaxUnits   = 0;
+    $totalCurrUnits  = 0;
+    $atCapacityCount = 0;
+    $avgLoad         = 0;
+    $availableUnits  = 0;
+    $utilization     = 0;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

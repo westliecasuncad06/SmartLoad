@@ -315,3 +315,74 @@ document.addEventListener('keydown', (e) => {
         document.getElementById('globalSearch').focus();
     }
 });
+
+// --------------------------------------------------
+// Load Report Modals (View / Close)
+// --------------------------------------------------
+function openReportModal(type) {
+    const modal = document.getElementById('reportModal-' + type);
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeReportModal(type) {
+    const modal = document.getElementById('reportModal-' + type);
+    if (modal) modal.classList.add('hidden');
+}
+
+// Close modals on backdrop click
+document.addEventListener('click', (e) => {
+    ['faculty', 'subject', 'overload'].forEach(type => {
+        const modal = document.getElementById('reportModal-' + type);
+        if (modal && e.target === modal) modal.classList.add('hidden');
+    });
+});
+
+// --------------------------------------------------
+// Load Report CSV Export
+// --------------------------------------------------
+function exportReport(type) {
+    const el = document.getElementById('reportData-' + type);
+    if (!el) { alert('No report data available.'); return; }
+
+    let rows;
+    try { rows = JSON.parse(el.textContent); } catch (_) { alert('Failed to parse report data.'); return; }
+    if (!rows.length) { alert('No data to export.'); return; }
+
+    let csv = '';
+    const filenames = { faculty: 'faculty_load_summary', subject: 'subject_assignment_report', overload: 'overload_analysis' };
+
+    if (type === 'faculty') {
+        csv = 'Teacher,Type,Current Units,Max Units,Status,Expertise\n';
+        rows.forEach(r => {
+            const cur = Number(r.current_units), max = Number(r.max_units);
+            const status = cur > max ? 'Overloaded' : (cur === max ? 'At Capacity' : 'Normal');
+            csv += csvRow([r.name, r.type, cur, max, status, r.expertise_tags || '']);
+        });
+    } else if (type === 'subject') {
+        csv = 'Code,Subject,Program,Units,Assigned To,Status\n';
+        rows.forEach(r => {
+            const teacher = r.teacher_name || 'Unassigned';
+            const status = teacher === 'Unassigned' ? 'Unassigned' : (r.assignment_status || 'Assigned');
+            csv += csvRow([r.course_code, r.subject_name, r.program, r.units, teacher, status]);
+        });
+    } else if (type === 'overload') {
+        csv = 'Teacher,Type,Current Units,Max Units,Excess Units\n';
+        rows.forEach(r => {
+            csv += csvRow([r.name, r.type, r.current_units, r.max_units, r.excess_units]);
+        });
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (filenames[type] || 'report') + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function csvRow(fields) {
+    return fields.map(f => '"' + String(f).replace(/"/g, '""') + '"').join(',') + '\n';
+}
