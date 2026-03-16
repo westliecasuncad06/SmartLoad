@@ -51,6 +51,11 @@
                         <option>BS Information Technology</option>
                         <option>BS Mathematics</option>
                     </select>
+                    <select id="subjectStatusFilter" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="all">All Status</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="unassigned">Unassigned</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -80,12 +85,28 @@
                         $hasSubjectArchive = false;
                     }
 
-                    $subjectSql = $hasSubjectArchive
-                        ? 'SELECT * FROM subjects WHERE is_archived = 0 ORDER BY course_code ASC'
-                        : 'SELECT * FROM subjects ORDER BY course_code ASC';
+                    $subjectSql = 'SELECT sub.id, sub.course_code, sub.name, sub.program, sub.units, sub.prerequisites,
+                                          a.id AS assignment_id, a.status AS assignment_status,
+                                          t.id AS assigned_teacher_id, t.name AS assigned_teacher_name
+                                   FROM subjects sub
+                                   LEFT JOIN (
+                                       SELECT subject_id, MAX(id) AS latest_assignment_id
+                                       FROM assignments
+                                       GROUP BY subject_id
+                                   ) la ON la.subject_id = sub.id
+                                   LEFT JOIN assignments a ON a.id = la.latest_assignment_id
+                                   LEFT JOIN teachers t ON t.id = a.teacher_id';
+
+                    if ($hasSubjectArchive) {
+                        $subjectSql .= ' WHERE sub.is_archived = 0';
+                    }
+
+                    $subjectSql .= ' ORDER BY sub.course_code ASC';
 
                     $subjectRows = $pdo->query($subjectSql);
                     foreach ($subjectRows as $subject):
+                        $isAssigned = !empty($subject['assignment_id']);
+                        $assignedTo = $isAssigned ? (string)($subject['assigned_teacher_name'] ?? '') : '';
                     ?>
                     <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                         <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600"></td>
@@ -94,8 +115,14 @@
                         <td class="px-6 py-4 text-slate-600"><?php echo htmlspecialchars($subject['program']); ?></td>
                         <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium"><?php echo (int)$subject['units']; ?></span></td>
                         <td class="px-6 py-4 text-slate-500 text-xs"><?php echo htmlspecialchars($subject['prerequisites'] ?: 'None'); ?></td>
-                        <td class="px-6 py-4 text-slate-400 italic">—</td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Unassigned</span></td>
+                        <td class="px-6 py-4 <?php echo $isAssigned ? 'text-slate-700' : 'text-slate-400 italic'; ?>"><?php echo $isAssigned ? htmlspecialchars($assignedTo ?: '—') : '—'; ?></td>
+                        <td class="px-6 py-4">
+                            <?php if ($isAssigned): ?>
+                                <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Assigned</span>
+                            <?php else: ?>
+                                <span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Unassigned</span>
+                            <?php endif; ?>
+                        </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center justify-center gap-2">
                                 <button

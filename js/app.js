@@ -633,6 +633,9 @@ function buildSubjectRowHtml(s) {
     const units = Number(s.units || 0);
     const prerequisites = String(s.prerequisites || '');
 
+    const isAssigned = String(s.is_assigned || '0') === '1';
+    const assignedTo = String(s.assigned_teacher_name || '').trim();
+
     const prereqLabel = (prerequisites || '').trim() ? prerequisites : 'None';
 
     return `
@@ -643,8 +646,11 @@ function buildSubjectRowHtml(s) {
   <td class="px-6 py-4 text-slate-600">${escapeHtml(program)}</td>
   <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium">${escapeHtml(units)}</span></td>
   <td class="px-6 py-4 text-slate-500 text-xs">${escapeHtml(prereqLabel)}</td>
-  <td class="px-6 py-4 text-slate-400 italic">—</td>
-  <td class="px-6 py-4"><span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Unassigned</span></td>
+    <td class="px-6 py-4 ${isAssigned ? 'text-slate-700' : 'text-slate-400 italic'}">${isAssigned ? escapeHtml(assignedTo || '—') : '—'}</td>
+    <td class="px-6 py-4">${isAssigned
+                ? '<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Assigned</span>'
+                : '<span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Unassigned</span>'}
+    </td>
   <td class="px-6 py-4">
     <div class="flex items-center justify-center gap-2">
       <button
@@ -750,18 +756,21 @@ function initSubjectFilters() {
     const tbody = document.getElementById('subjectTableBody');
     const searchEl = document.getElementById('subjectSearch');
     const programEl = document.getElementById('subjectProgramFilter');
+    const statusEl = document.getElementById('subjectStatusFilter');
 
-    if (!page || !tbody || (!searchEl && !programEl)) return;
+    if (!page || !tbody || (!searchEl && !programEl && !statusEl)) return;
 
     let abortController = null;
 
     const run = async () => {
         const search = (searchEl ? searchEl.value : '').trim();
         const program = programEl ? String(programEl.value || 'All') : 'All';
+        const status = statusEl ? String(statusEl.value || 'all') : 'all';
 
         const qs = new URLSearchParams();
         qs.set('search', search);
         qs.set('program', program);
+        qs.set('status', status);
 
         if (abortController) abortController.abort();
         abortController = new AbortController();
@@ -785,6 +794,7 @@ function initSubjectFilters() {
     const runDebounced = debounce(run, 200);
     if (searchEl) searchEl.addEventListener('keyup', runDebounced);
     if (programEl) programEl.addEventListener('change', run);
+    if (statusEl) statusEl.addEventListener('change', run);
 }
 
 // --------------------------------------------------
