@@ -1562,11 +1562,21 @@ async function generateSchedule() {
             return;
         }
 
-        alert(
-            'Schedule generated successfully!\n\n' +
-            '• ' + data.assigned_count + ' subjects assigned\n' +
-            '• ' + data.unassigned_count + ' subjects unassigned'
-        );
+        if (data.status === 'success') {
+            if (data.ai_enabled === true) {
+                alert(
+                    '✨ Schedule Generated Successfully!\n\n' +
+                    `• Assigned: ${data.assigned_count}\n` +
+                    `• Unassigned: ${data.unassigned_count}\n` +
+                    `• Gemini AI Evaluations: ${data.ai_calls} calls made.`
+                );
+            } else {
+                alert(
+                    '⚠️ Schedule Generated via Fallback Logic.\n' +
+                    '(Gemini API Key missing or invalid. AI was NOT used).'
+                );
+            }
+        }
 
         // Reload to reflect new data in the tables
         location.reload();
