@@ -294,10 +294,6 @@ try {
                         <button onclick="openSettingsModal()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="Settings">
                             <i class="fas fa-cog"></i>
                         </button>
-                        <button class="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
-                            <i class="fas fa-bell"></i>
-                            <span class="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">3</span>
-                        </button>
                         <div class="hidden sm:flex items-center gap-3 pl-4 border-l border-slate-200">
                             <div class="w-9 h-9 bg-gradient-to-br from-indigo-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                                 PC
