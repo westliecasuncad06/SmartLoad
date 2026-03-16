@@ -11,6 +11,144 @@ function json_response(int $statusCode, array $payload): void {
 }
 
 /**
+ * Import historical teachers from CSV file into historical_teachers table
+ */
+function importHistoricalTeachersFromFile($filepath, $academicYear, $semester, $pdo) {
+    $count = 0;
+    try {
+        if (($handle = fopen($filepath, 'r')) !== false) {
+            $headers = fgetcsv($handle);
+            
+            while (($row = fgetcsv($handle)) !== false) {
+                if (empty($row[0])) continue;
+                
+                $data = array_combine($headers, $row);
+                
+                $stmt = $pdo->prepare("
+                    INSERT INTO historical_teachers 
+                    (academic_year, semester, name, email, type, max_units, expertise_tags)
+                    VALUES (:year, :semester, :name, :email, :type, :max_units, :expertise)
+                    ON DUPLICATE KEY UPDATE
+                        name = VALUES(name),
+                        max_units = VALUES(max_units),
+                        expertise_tags = VALUES(expertise_tags)
+                ");
+                
+                $stmt->execute([
+                    ':year' => $academicYear,
+                    ':semester' => $semester . ' Semester',
+                    ':name' => trim($data['name'] ?? ''),
+                    ':email' => trim($data['email'] ?? ''),
+                    ':type' => trim($data['type'] ?? 'Part-time'),
+                    ':max_units' => (int)($data['max_units'] ?? 12),
+                    ':expertise' => trim($data['expertise_tags'] ?? '')
+                ]);
+                
+                $count++;
+            }
+            fclose($handle);
+        }
+    } catch (Exception $e) {
+        return ['success' => false, 'count' => $count, 'error' => $e->getMessage()];
+    }
+    
+    return ['success' => true, 'count' => $count];
+}
+
+/**
+ * Import historical subjects from CSV file into historical_subjects table
+ */
+function importHistoricalSubjectsFromFile($filepath, $academicYear, $semester, $pdo) {
+    $count = 0;
+    try {
+        if (($handle = fopen($filepath, 'r')) !== false) {
+            $headers = fgetcsv($handle);
+            
+            while (($row = fgetcsv($handle)) !== false) {
+                if (empty($row[0])) continue;
+                
+                $data = array_combine($headers, $row);
+                
+                $stmt = $pdo->prepare("
+                    INSERT INTO historical_subjects 
+                    (academic_year, semester, course_code, name, program, units, prerequisites)
+                    VALUES (:year, :semester, :code, :name, :program, :units, :prereq)
+                    ON DUPLICATE KEY UPDATE
+                        name = VALUES(name),
+                        units = VALUES(units),
+                        prerequisites = VALUES(prerequisites)
+                ");
+                
+                $stmt->execute([
+                    ':year' => $academicYear,
+                    ':semester' => $semester . ' Semester',
+                    ':code' => trim($data['course_code'] ?? ''),
+                    ':name' => trim($data['name'] ?? ''),
+                    ':program' => trim($data['program'] ?? ''),
+                    ':units' => (int)($data['units'] ?? 3),
+                    ':prereq' => trim($data['prerequisites'] ?? '')
+                ]);
+                
+                $count++;
+            }
+            fclose($handle);
+        }
+    } catch (Exception $e) {
+        return ['success' => false, 'count' => $count, 'error' => $e->getMessage()];
+    }
+    
+    return ['success' => true, 'count' => $count];
+}
+
+/**
+ * Import historical schedules from CSV file into historical_schedules table
+ */
+function importHistoricalSchedulesFromFile($filepath, $academicYear, $semester, $pdo) {
+    $count = 0;
+    try {
+        if (($handle = fopen($filepath, 'r')) !== false) {
+            $headers = fgetcsv($handle);
+            
+            while (($row = fgetcsv($handle)) !== false) {
+                if (empty($row[0])) continue;
+                
+                $data = array_combine($headers, $row);
+                
+                $stmt = $pdo->prepare("
+                    INSERT INTO historical_schedules 
+                    (academic_year, semester, subject_id, subject_code, day_of_week, start_time, end_time, room, section)
+                    VALUES (:year, :semester, :subject_id, :code, :day, :start, :end, :room, :section)
+                    ON DUPLICATE KEY UPDATE
+                        day_of_week = VALUES(day_of_week),
+                        start_time = VALUES(start_time),
+                        end_time = VALUES(end_time),
+                        room = VALUES(room)
+                ");
+                
+                $stmt->execute([
+                    ':year' => $academicYear,
+                    ':semester' => $semester . ' Semester',
+                    ':subject_id' => (int)($data['subject_id'] ?? 0),
+                    ':code' => trim($data['subject_code'] ?? $data['course_code'] ?? ''),
+                    ':day' => trim($data['day_of_week'] ?? ''),
+                    ':start' => trim($data['start_time'] ?? ''),
+                    ':end' => trim($data['end_time'] ?? ''),
+                    ':room' => trim($data['room'] ?? ''),
+                    ':section' => trim($data['section'] ?? '')
+                ]);
+                
+                $count++;
+            }
+            fclose($handle);
+        }
+    } catch (Exception $e) {
+        return ['success' => false, 'count' => $count, 'error' => $e->getMessage()];
+    }
+    
+    return ['success' => true, 'count' => $count];
+}
+
+/**
  * Parse a teacher availability string.
  *
  * Format example: "Mon 08:00-17:00;Tue 09:00-15:00"
@@ -184,45 +322,80 @@ try {
             $ext = 'csv';
         }
 
-        $stamp = date('Ymd_His');
-        try {
-            $rand = bin2hex(random_bytes(4));
-        } catch (Exception $ignore) {
-            $rand = (string)mt_rand(10000000, 99999999);
-        }
-
+        // Use standard naming format that import_historical_data.php expects
         $ayToken = preg_replace('/\-+/', '-', $academicYear);
         $semToken = preg_replace('/[^a-z0-9]+/i', '', $semesterToken);
-
-        $fileName = 'previous_' . $type . '_AY' . $ayToken . '_' . $semToken . '_' . $stamp . '_' . $rand . '.' . preg_replace('/[^a-z0-9]+/i', '', $ext);
+        $fileName = $type . '_AY' . $ayToken . '_' . $semToken . '.' . preg_replace('/[^a-z0-9]+/i', '', $ext);
         if (substr($fileName, -1) === '.') {
             $fileName .= 'csv';
         }
         $targetPath = $historicalDir . '/' . $fileName;
 
+        // Backup existing file if it exists
+        if (file_exists($targetPath)) {
+            $backup = $targetPath . '.backup_' . date('YmdHis');
+            if (!copy($targetPath, $backup)) {
+                // Non-fatal: just log it, don't fail
+            }
+        }
+
         if (!move_uploaded_file($tmpPath, $targetPath)) {
             json_response(500, ['status' => 'error', 'message' => 'Failed to store uploaded file as historical dataset.']);
         }
 
-        // Sidecar metadata (best-effort)
+        // ===================================================
+        // NOW: Import the historical data into database
+        // ===================================================
+        $importResults = [
+            'teachers' => ['count' => 0],
+            'subjects' => ['count' => 0],
+            'schedules' => ['count' => 0],
+        ];
+
         try {
-            $meta = [
-                'dataset_scope' => 'previous',
-                'type' => $type,
-                'academic_year' => $academicYearRaw,
-                'semester' => $semesterRaw,
-                'stored_as' => 'files/historical/' . $fileName,
-                'original_name' => $originalName,
-                'uploaded_at' => date('c'),
-            ];
-            @file_put_contents($targetPath . '.meta.json', json_encode($meta, JSON_PRETTY_PRINT));
+            if ($type === 'teacher') {
+                $importResults['teachers'] = importHistoricalTeachersFromFile($targetPath, $academicYear, $semesterToken, $pdo);
+            } elseif ($type === 'subject') {
+                $importResults['subjects'] = importHistoricalSubjectsFromFile($targetPath, $academicYear, $semesterToken, $pdo);
+            } elseif ($type === 'schedule') {
+                $importResults['schedules'] = importHistoricalSchedulesFromFile($targetPath, $academicYear, $semesterToken, $pdo);
+            }
+        } catch (Exception $e) {
+            // Log error but don't fail - file is backed up
+            error_log('Historical import error: ' . $e->getMessage());
+        }
+
+        // Update metadata with import results
+        try {
+            $totalTeachers = $importResults['teachers']['count'] ?? 0;
+            $totalSubjects = $importResults['subjects']['count'] ?? 0;
+            $totalRecords = array_sum([$totalTeachers, $totalSubjects, $importResults['schedules']['count'] ?? 0]);
+
+            $stmt = $pdo->prepare("
+                INSERT INTO historical_analytics_metadata 
+                (academic_year, semester, total_teachers, total_subjects, total_assignments, notes)
+                VALUES (:year, :semester, :teachers, :subjects, :records, :notes)
+                ON DUPLICATE KEY UPDATE 
+                    total_teachers = :teachers,
+                    total_subjects = :subjects,
+                    total_assignments = :records
+            ");
+            
+            $stmt->execute([
+                ':year' => $academicYear,
+                ':semester' => $semesterToken . ' Semester',
+                ':teachers' => $totalTeachers,
+                ':subjects' => $totalSubjects,
+                ':records' => $totalRecords,
+                ':notes' => "Imported from upload on " . date('Y-m-d H:i:s')
+            ]);
         } catch (Exception $ignore) {
         }
 
-        // Best-effort audit log (do not fail the upload if auditing fails)
+        // Audit log (best-effort)
         try {
             $label = ucfirst($type);
-            $auditDesc = $label . ' CSV uploaded (historical AY ' . $academicYearRaw . ', ' . $semesterRaw . ')';
+            $auditDesc = $label . ' CSV uploaded and imported (historical AY ' . $academicYearRaw . ', ' . $semesterRaw . ')';
             $insertAudit = $pdo->prepare('INSERT INTO audit_logs (action_type, description, user) VALUES (?, ?, ?)');
             $insertAudit->execute([
                 'File Upload',
@@ -238,9 +411,10 @@ try {
             'dataset_scope' => 'previous',
             'academic_year' => $academicYearRaw,
             'semester' => $semesterRaw,
-            'saved_only' => true,
+            'saved_and_imported' => true,
             'stored_as' => 'files/historical/' . $fileName,
-            'message' => 'Saved as historical dataset for forecasting (not imported into current scheduling data).',
+            'import_results' => $importResults,
+            'message' => 'Successfully imported into historical database for forecasting.',
         ]);
     }
 

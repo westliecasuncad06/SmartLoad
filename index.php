@@ -1196,6 +1196,35 @@ try {
         </div>
     </div>
 
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center z-[9999] backdrop-blur-sm">
+        <div class="flex flex-col items-center justify-center gap-6">
+            <!-- Logo Container with Spin Animation -->
+            <div class="relative w-24 h-24 flex items-center justify-center">
+                <!-- Outer rotating ring -->
+                <div class="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 border-r-indigo-400 animate-spin"></div>
+                
+                <!-- Inner logo -->
+                <div class="relative z-10 bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-lg shadow-2xl">
+                    <i class="fas fa-bolt text-4xl text-white"></i>
+                </div>
+            </div>
+
+            <!-- Loading Text -->
+            <div class="text-center">
+                <h2 class="text-2xl font-bold text-white mb-2">SmartLoad</h2>
+                <p id="loadingText" class="text-slate-300 text-sm">Processing...</p>
+                
+                <!-- Animated dots -->
+                <div class="flex items-center justify-center gap-1 mt-3">
+                    <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0s;"></div>
+                    <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0.15s;"></div>
+                    <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0.3s;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tailwind (script) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -1204,5 +1233,31 @@ try {
 
     <!-- Application JavaScript -->
     <script src="js/app.js"></script>
+    
+    <!-- Loading Overlay Control Script -->
+    <script>
+        // Show loading overlay
+        function showLoadingOverlay(text = 'Processing...') {
+            const overlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            if (overlay) {
+                loadingText.textContent = text;
+                overlay.classList.remove('hidden');
+            }
+        }
+
+        // Hide loading overlay
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // Show loading on page load
+        window.addEventListener('load', function() {
+            hideLoadingOverlay();
+        });
+    </script>
 </body>
 </html>

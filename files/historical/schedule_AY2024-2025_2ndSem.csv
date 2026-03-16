@@ -1,0 +1,16 @@
+subject_id,day_of_week,start_time,end_time,room
+16,Monday,16:00,18:00,Room 108
+17,Tuesday,08:00,10:00,Room 109
+18,Wednesday,13:00,16:00,Lab A
+19,Thursday,08:00,10:00,Room 110
+20,Friday,16:00,18:00,Lab D
+21,Monday,11:00,13:00,Room 203
+22,Tuesday,16:00,18:00,Room 204
+23,Wednesday,11:00,13:00,Room 205
+24,Thursday,13:00,16:00,Lab B
+25,Friday,11:00,13:00,Room 206
+26,Monday,09:00,11:00,Room 207
+27,Tuesday,11:00,13:00,Room 208
+28,Wednesday,16:00,18:00,Room 209
+29,Thursday,10:00,12:00,Room 210
+30,Friday,14:00,17:00,Room 211

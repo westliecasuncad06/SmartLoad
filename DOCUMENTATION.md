@@ -1,19 +1,30 @@
 # SmartLoad Documentation
 
-Last updated: March 16, 2026
+Last updated: March 17, 2026
 
 ## Overview
 
-SmartLoad is a PHP + MySQL (PDO) faculty scheduling system for:
+SmartLoad is a PHP + MySQL (PDO) faculty scheduling system with integrated predictive analytics for:
 
 - importing teachers, subjects, and schedule slots from CSV
 - generating subject → teacher assignments (rule-based with optional Gemini AI refinement)
 - tracking loads (current units vs max units)
-- manual reassignment (“override”) with audit logging
+- manual reassignment ("override") with audit logging
 - exporting reports (CSV + PDF from the browser) and exporting audit logs
 - viewing teacher load details and (attempting to) email a teacher load PDF
+- **[NEW v2.0]** separating current operational data from historical data for predictive analytics
 
 The UI is rendered by PHP (`index.php`) and behaves like a single-page dashboard using JavaScript (`js/app.js`) to switch sections and call the backend APIs under `api/`.
+
+### Version 2.0 Features (Predictive Analytics)
+
+- ✅ Separate databases for current operations and historical records
+- ✅ Historical data import from CSV by academic year and semester
+- ✅ Predictive analytics engine with multiple endpoints
+- ✅ Teacher workload trend analysis
+- ✅ Subject assignment pattern recognition
+- ✅ Academic year comparison analytics
+- ✅ Teaching load statistics and forecasting
 
 ## Tech Stack
 
@@ -30,6 +41,8 @@ The UI is rendered by PHP (`index.php`) and behaves like a single-page dashboard
 SmartLoad/
 |-- index.php
 |-- DOCUMENTATION.md
+|-- DATABASE_RECONSTRUCTION.md (NEW: Architecture overview)
+|-- ADMIN_GUIDE.md (NEW: Administration procedures)
 |-- database.sql
 |-- api/
 |   |-- upload.php
@@ -45,7 +58,9 @@ SmartLoad/
 |   |-- add_subject.php
 |   |-- update_subject.php
 |   |-- archive_subject.php
-|   `-- filter_subjects.php
+|   |-- filter_subjects.php
+|   |-- import_historical_data.php (NEW: Import historical data)
+|   `-- predictive_analytics.php (NEW: Analytics endpoints)
 |-- includes/
 |   |-- db.php
 |   |-- GeminiAPI.php
@@ -60,48 +75,142 @@ SmartLoad/
 |-- css/
 |   `-- style.css
 |-- database/
-|   `-- database.sql
-`-- files/ (sample CSVs used for testing/import)
+|   |-- smartload.sql (updated schema)
+|   |-- smartload_new.sql (NEW: Fresh install)
+|   `-- add_historical_tables.sql (NEW: Migration)
+`-- files/ (Sample CSVs)
+    `-- historical/ (Historical data by year/semester)
 ```
 
 Notes:
 
 - There is no `index.html` in the current workspace.
+- The UI advertises "CSV/Excel", but the backend importer parses CSV only.
+- **NEW v2.0:** Historical data is completely separated from current operations.
 - The UI advertises “CSV/Excel”, but the backend importer parses CSV only.
 
 ## Setup (Local / XAMPP)
 
+### For Fresh Installation (v2.0)
 1. Import the schema into MySQL:
-	- use either `database.sql` or `database/database.sql` (they currently match)
+	- Use `database/smartload_new.sql` for complete v2.0 setup with historical tables
+	- Command: `mysql smartload < database/smartload_new.sql`
 2. Configure DB access + Gemini key in `includes/db.php`.
 3. Ensure PHP has:
 	- PDO MySQL enabled
 	- cURL enabled (required for Gemini calls)
 4. Serve via Apache (XAMPP) and open `index.php`.
 
-Email note:
+### For Existing Installations (Upgrade to v2.0)
+1. **Backup your current database:**
+   ```bash
+   mysqldump smartload > backup_$(date +%Y%m%d).sql
+   ```
+2. **Add historical tables:**
+   ```bash
+   mysql smartload < database/add_historical_tables.sql
+   ```
+3. **Import historical data:**
+   - See "Predictive Analytics APIs" section below
+   - Use `/api/import_historical_data.php` to import historical CSV data
+
+### Email Configuration Note
 
 - `api/send_teacher_load_pdf.php` uses PHP `mail()`. On many XAMPP installs `mail()` is not configured, so sending may fail until SMTP is set up.
 
+### Additional Documentation
+
+- **DATABASE_RECONSTRUCTION.md** - Architecture and design decisions
+- **ADMIN_GUIDE.md** - Operations, migration procedures, and troubleshooting
+
 ## Database Schema
 
-Schema files define these tables:
+The database now has two distinct sections:
 
-- `teachers`: faculty records + load tracking
-- `subjects`: subject catalog
-- `teacher_availability`: availability windows (present but not used by generation logic)
-- `schedules`: subject meeting slots (day/time/room)
-- `assignments`: subject ↔ teacher assignment rows (with `status` and `rationale`)
+### Current Operational Tables
+
+These tables display on the homepage and are used for day-to-day operations:
+
+- `teachers`: current faculty records + load tracking (with `is_archived` flag)
+- `subjects`: current subject catalog (with `is_archived` flag)
+- `teacher_availability`: availability windows for current teachers
+- `schedules`: current meeting slots (day/time/room)
+- `assignments`: current subject ↔ teacher assignments
 - `audit_logs`: append-only activity log
+- `policy_settings`: system configuration
 
-Archive support:
+### Historical Data Tables (NEW)
 
-- `teachers.is_archived` and `subjects.is_archived` exist in the schema and are used by the UI/API to hide archived rows.
+Dedicated tables for predictive analytics, never displayed on homepage:
+
+- `historical_teachers`: teacher records by academic year/semester
+- `historical_subjects`: subject records by academic year/semester
+- `historical_schedules`: schedule records by academic year/semester
+- `historical_assignments`: assignment records by academic year/semester
+- `historical_analytics_metadata`: import metadata and statistics
+
+**Key Design:** Current and historical tables are completely separated. All homepage queries filter to `is_archived = 0` only.
+
+### Archive Support
+
+- `teachers.is_archived` and `subjects.is_archived` control which records appear on homepage
+- Archiving moves records out of operational view without deletion
+- Historical data can be imported separately without affecting current operations
 
 Runtime-created table:
 
 - `policy_settings` is created automatically by `api/policy_settings.php` and `api/generate_schedule.php` if missing.
+## Predictive Analytics APIs (NEW v2.0)
 
+SmartLoad now includes predictive analytics engines powered by historical data.
+
+### Import Historical Data
+
+**Endpoint:** `POST /api/import_historical_data.php`
+
+**Request Body:**
+```json
+{
+  "academic_year": "2024-2025",
+  "semester": "1stSem"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "academic_year": "2024-2025",
+  "semester": "1stSem",
+  "results": {
+    "teachers": {"success": true, "count": 12},
+    "subjects": {"success": true, "count": 14},
+    "schedules": {"success": true, "count": 15}
+  }
+}
+```
+
+### Analytics Endpoints
+
+**Endpoint:** `GET /api/predictive_analytics.php?endpoint=<NAME>`
+
+Available endpoints:
+
+| Endpoint | Purpose | Parameters |
+|----------|---------|-----------|
+| `workload_trends` | Teacher loads over time | `email` (optional) |
+| `assignment_patterns` | Subject assignment history | `course_code` (optional) |
+| `academic_comparison` | Compare years/semesters | None |
+| `teaching_load_stats` | Load distribution by type | `year` (optional) |
+| `expertise_distribution` | Expertise by period | `year`, `semester` (optional) |
+| `predict_shortage` | Forecast teacher shortage | None |
+| `list_available` | Show available endpoints | None |
+
+**Example:**
+```bash
+GET /api/predictive_analytics.php?endpoint=workload_trends
+GET /api/predictive_analytics.php?endpoint=teaching_load_stats&year=2024-2025
+```
 ## UI Modules (What’s Live)
 
 ### Dashboard (in `index.php`)

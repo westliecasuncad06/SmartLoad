@@ -324,6 +324,7 @@ function applyPolicySettingsToForm(settings) {
 async function loadPolicySettings() {
     try {
         setPolicySettingsStatus('Loading settings...', false);
+        showLoadingOverlay('Loading policy settings...');
         const response = await fetch('api/policy_settings.php', { method: 'GET' });
         const data = await response.json().catch(() => ({}));
 
@@ -333,8 +334,10 @@ async function loadPolicySettings() {
 
         applyPolicySettingsToForm(data.settings);
         setPolicySettingsStatus('', false);
+        hideLoadingOverlay();
     } catch (err) {
         setPolicySettingsStatus('Failed to load settings: ' + (err && err.message ? err.message : String(err)), true);
+        hideLoadingOverlay();
     }
 }
 
@@ -779,6 +782,7 @@ async function loadPredictiveAnalytics() {
     if (!canvas || !insightEl) return;
 
     insightEl.innerHTML = 'Loading predictions...';
+    showLoadingOverlay('Loading predictive analytics...');
 
     if (typeof Chart === 'undefined') {
         insightEl.innerHTML = 'Chart.js is not loaded.';
@@ -792,10 +796,12 @@ async function loadPredictiveAnalytics() {
 
         if (!response.ok || (payload && payload.status === 'error')) {
             const msg = payload && payload.message ? payload.message : 'Failed to load predictive analytics data.';
+            hideLoadingOverlay();
             throw new Error(msg);
         }
 
         if (!Array.isArray(payload) || payload.length === 0) {
+            hideLoadingOverlay();
             throw new Error('No predictive analytics data available.');
         }
 
@@ -871,6 +877,7 @@ async function loadPredictiveAnalytics() {
             const msg = `${subjectName} is within capacity based on current forecast.`;
             insightEl.innerHTML = escapeHtml(msg);
         }
+        hideLoadingOverlay();
     } catch (err) {
         if (predictiveChartInstance) {
             predictiveChartInstance.destroy();
@@ -878,6 +885,7 @@ async function loadPredictiveAnalytics() {
         }
 
         insightEl.innerHTML = escapeHtml(err && err.message ? err.message : 'Unable to load predictions.');
+        hideLoadingOverlay();
     }
 }
 
@@ -2453,6 +2461,8 @@ function initUploadDatasetScopeControls() {
     const toggle = document.getElementById('uploadPreviousToggle');
     const ayInput = document.getElementById('uploadAcademicYear');
     const semSelect = document.getElementById('uploadSemester');
+    const generateBtn = document.getElementById('generateBtn');
+    
     if (!toggle || !ayInput || !semSelect) return;
 
     const sync = () => {
@@ -2463,6 +2473,15 @@ function initUploadDatasetScopeControls() {
         if (!isPrev) {
             ayInput.value = '';
             semSelect.value = '';
+        }
+        
+        // Update button text based on mode
+        if (generateBtn) {
+            if (isPrev) {
+                generateBtn.innerHTML = '<i class="fas fa-history"></i> Update Historical Data';
+            } else {
+                generateBtn.innerHTML = '<i class="fas fa-bolt"></i> Generate Schedule';
+            }
         }
     };
 
@@ -2550,6 +2569,8 @@ async function uploadFile(file, type) {
         conflictAction = arguments[2].conflict_action || 'detect';
     }
 
+    showLoadingOverlay('Uploading file...');
+
     const previousToggle = document.getElementById('uploadPreviousToggle');
     const datasetScope = (previousToggle && previousToggle.checked) ? 'previous' : 'current';
 
@@ -2588,16 +2609,44 @@ async function uploadFile(file, type) {
     // Some endpoints may return non-2xx for conflict-style responses.
     // Treat known statuses as valid outcomes and let the caller decide UI.
     if (data && data.status === 'conflict') {
+        hideLoadingOverlay();
         return data;
     }
 
     if (!response.ok) {
+        hideLoadingOverlay();
         throw new Error((data && data.message) ? data.message : 'Upload failed.');
     }
 
     if (data.status === 'success') {
+        // Handle historical data import
+        if (data.saved_and_imported) {
+            let importMsg = `✅ Historical Data Imported Successfully!\n\n`;
+            importMsg += `Academic Year: ${data.academic_year}\n`;
+            importMsg += `Semester: ${data.semester}\n\n`;
+            
+            if (data.import_results) {
+                if (data.import_results.teachers && data.import_results.teachers.count > 0) {
+                    importMsg += `• Teachers: ${data.import_results.teachers.count} imported\n`;
+                }
+                if (data.import_results.subjects && data.import_results.subjects.count > 0) {
+                    importMsg += `• Subjects: ${data.import_results.subjects.count} imported\n`;
+                }
+                if (data.import_results.schedules && data.import_results.schedules.count > 0) {
+                    importMsg += `• Schedules: ${data.import_results.schedules.count} imported\n`;
+                }
+            }
+            
+            importMsg += `\nData is now available for predictive analytics.`;
+            alert(importMsg);
+            hideLoadingOverlay();
+            return data;
+        }
+
+        // Handle legacy saved_only response (if any)
         if (data.saved_only) {
             alert(data.message || 'Saved as historical dataset for forecasting (not imported into current scheduling data).');
+            hideLoadingOverlay();
             return data;
         }
 
@@ -2630,9 +2679,11 @@ async function uploadFile(file, type) {
         } else {
             alert('Successfully inserted ' + data.rows_inserted + ' rows!' + updatedMsg);
         }
+        hideLoadingOverlay();
         return data;
     }
 
+    hideLoadingOverlay();
     throw new Error(data.message || 'Upload failed.');
 }
 
@@ -2753,9 +2804,71 @@ function updateUploadSummary() {
 }
 
 // --------------------------------------------------
+// Update Historical Analytics Records
+// --------------------------------------------------
+async function updateHistoricalAnalytics() {
+    const btn = document.getElementById('generateBtn');
+    const indicator = document.getElementById('generatingIndicator');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> Updating...';
+    indicator.classList.remove('hidden');
+    indicator.classList.add('flex');
+    showLoadingOverlay('Updating historical records for predictive analytics...');
+
+    try {
+        const response = await fetch('api/predictive_analytics.php?action=update_records', {
+            method: 'POST',
+        });
+
+        const data = await response.json();
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Schedule';
+        indicator.classList.add('hidden');
+        indicator.classList.remove('flex');
+        hideLoadingOverlay();
+
+        if (!response.ok || data.status !== 'success') {
+            alert('Note: ' + (data.message || 'Historical records update completed with some items not processed.'));
+            return;
+        }
+
+        alert(
+            '✅ Historical Records Updated Successfully!\n\n' +
+            'Predictive analytics has been refreshed with the uploaded historical data.\n' +
+            'You can now use this data for forecasting and trend analysis.'
+        );
+
+        // Optionally reload to reflect updates
+        setTimeout(() => location.reload(), 1000);
+
+    } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Schedule';
+        indicator.classList.add('hidden');
+        indicator.classList.remove('flex');
+        hideLoadingOverlay();
+
+        alert('Network error: ' + err.message);
+    }
+}
+
+// --------------------------------------------------
 // Generate Schedule (real API call)
 // --------------------------------------------------
 async function generateSchedule() {
+    // Check if this is for updating historical data or generating schedule
+    const historicalToggle = document.getElementById('uploadPreviousToggle');
+    const isHistoricalMode = historicalToggle && historicalToggle.checked;
+
+    if (isHistoricalMode) {
+        // Mode: Update Historical Records for Predictive Analytics
+        await updateHistoricalAnalytics();
+        return;
+    }
+
+    // Mode: Generate Schedule Automatically (default)
     // Check if all required files are uploaded
     if (!uploadedFiles.teacher || !uploadedFiles.subject || !uploadedFiles.schedule) {
         const missingFiles = [];
@@ -2778,6 +2891,7 @@ async function generateSchedule() {
     btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> Generating...';
     indicator.classList.remove('hidden');
     indicator.classList.add('flex');
+    showLoadingOverlay('Generating schedule...');
 
     try {
         const response = await fetch('api/generate_schedule.php', {
@@ -2790,6 +2904,7 @@ async function generateSchedule() {
         btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Schedule';
         indicator.classList.add('hidden');
         indicator.classList.remove('flex');
+        hideLoadingOverlay();
 
         if (!response.ok || data.status !== 'success') {
             alert('Error: ' + (data.message || 'Schedule generation failed.'));
@@ -2821,6 +2936,7 @@ async function generateSchedule() {
         btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Schedule';
         indicator.classList.add('hidden');
         indicator.classList.remove('flex');
+        hideLoadingOverlay();
 
         alert('Network error: ' + err.message);
     }
@@ -3117,8 +3233,7 @@ function hideSearchDropdown() {
     currentSearchResults = [];
 }
 
-// Initialize on DOM ready
-document.addEventListener('DOMContentLoaded', initializeGlobalSearch);
+// Initialize on DOM ready (handled below to avoid double init)
 
 // --------------------------------------------------
 // Keyboard Shortcuts
@@ -3136,9 +3251,9 @@ document.addEventListener('keydown', (e) => {
 
 // Initialize search when document is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeSearch);
+    document.addEventListener('DOMContentLoaded', initializeGlobalSearch);
 } else {
-    initializeSearch();
+    initializeGlobalSearch();
 }
 
 // --------------------------------------------------
