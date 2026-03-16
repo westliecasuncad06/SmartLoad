@@ -2449,7 +2449,30 @@ function initTeachersPage() {
 const uploadZones = ['teacher', 'subject', 'schedule'];
 let uploadedFiles = { teacher: false, subject: false, schedule: false };
 
+function initUploadDatasetScopeControls() {
+    const toggle = document.getElementById('uploadPreviousToggle');
+    const ayInput = document.getElementById('uploadAcademicYear');
+    const semSelect = document.getElementById('uploadSemester');
+    if (!toggle || !ayInput || !semSelect) return;
+
+    const sync = () => {
+        const isPrev = !!toggle.checked;
+        ayInput.disabled = !isPrev;
+        semSelect.disabled = !isPrev;
+
+        if (!isPrev) {
+            ayInput.value = '';
+            semSelect.value = '';
+        }
+    };
+
+    toggle.addEventListener('change', sync);
+    sync();
+}
+
 function initFileUploads() {
+    initUploadDatasetScopeControls();
+
     uploadZones.forEach(type => {
         const zone = document.getElementById(type + 'Upload');
         const input = document.getElementById(type + 'FileInput');
@@ -2527,10 +2550,33 @@ async function uploadFile(file, type) {
         conflictAction = arguments[2].conflict_action || 'detect';
     }
 
+    const previousToggle = document.getElementById('uploadPreviousToggle');
+    const datasetScope = (previousToggle && previousToggle.checked) ? 'previous' : 'current';
+
+    const academicYearInput = document.getElementById('uploadAcademicYear');
+    const semesterSelect = document.getElementById('uploadSemester');
+    const academicYear = academicYearInput ? String(academicYearInput.value || '').trim() : '';
+    const semester = semesterSelect ? String(semesterSelect.value || '').trim() : '';
+
+    if (datasetScope === 'previous') {
+        if (!academicYear) {
+            throw new Error('Please enter the Academic Year for the previous dataset (e.g., 2025-2026).');
+        }
+        if (!semester) {
+            throw new Error('Please select the Semester for the previous dataset.');
+        }
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', type);
     formData.append('conflict_action', conflictAction);
+    formData.append('dataset_scope', datasetScope);
+
+    if (datasetScope === 'previous') {
+        formData.append('academic_year', academicYear);
+        formData.append('semester', semester);
+    }
 
     const response = await fetch('api/upload.php', {
         method: 'POST',
@@ -2550,6 +2596,11 @@ async function uploadFile(file, type) {
     }
 
     if (data.status === 'success') {
+        if (data.saved_only) {
+            alert(data.message || 'Saved as historical dataset for forecasting (not imported into current scheduling data).');
+            return data;
+        }
+
         const updatedMsg = (data.rows_updated && data.rows_updated > 0)
             ? (' ' + data.rows_updated + ' rows updated.')
             : '';

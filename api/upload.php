@@ -128,6 +128,14 @@ try {
     }
 
     $type = $_POST['type'];
+
+    // dataset_scope:
+    // - current (default): import into live scheduling tables
+    // - previous: store raw file for forecasting/historical analysis (do not modify live tables)
+    $datasetScope = isset($_POST['dataset_scope']) ? strtolower(trim((string)$_POST['dataset_scope'])) : 'current';
+    if (!in_array($datasetScope, ['current', 'previous'], true)) {
+        $datasetScope = 'current';
+    }
     // conflict_action:
     // - detect (default): insert non-duplicates and return conflicts (existing vs incoming)
     // - update: upsert (insert new + update duplicates)
@@ -136,6 +144,105 @@ try {
         $conflictAction = 'detect';
     }
     $tmpPath = $_FILES['file']['tmp_name'];
+
+    if ($datasetScope === 'previous') {
+        $academicYearRaw = isset($_POST['academic_year']) ? trim((string)$_POST['academic_year']) : '';
+        $semesterRaw     = isset($_POST['semester']) ? trim((string)$_POST['semester']) : '';
+
+        if ($academicYearRaw === '' || $semesterRaw === '') {
+            json_response(400, ['status' => 'error', 'message' => 'Missing academic_year or semester for historical upload.']);
+        }
+
+        // Sanitize for filename and storage.
+        $academicYear = preg_replace('/[^0-9\-]/', '', $academicYearRaw);
+        // Normalize semester to a known token.
+        $semesterNorm = strtolower(preg_replace('/[^a-z0-9]/i', '', $semesterRaw));
+        $semesterToken = match ($semesterNorm) {
+            '1st', 'first', '1stsemester', 'firstsemester', 'sem1', 'semester1' => '1st',
+            '2nd', 'second', '2ndsemester', 'secondsemester', 'sem2', 'semester2' => '2nd',
+            'summer' => 'summer',
+            default => $semesterNorm,
+        };
+
+        if ($academicYear === '') {
+            json_response(400, ['status' => 'error', 'message' => 'Invalid academic_year format.']);
+        }
+        if ($semesterToken === '') {
+            json_response(400, ['status' => 'error', 'message' => 'Invalid semester value.']);
+        }
+
+        $historicalDir = __DIR__ . '/../files/historical';
+        if (!is_dir($historicalDir)) {
+            if (!mkdir($historicalDir, 0775, true) && !is_dir($historicalDir)) {
+                json_response(500, ['status' => 'error', 'message' => 'Failed to create historical upload directory.']);
+            }
+        }
+
+        $originalName = isset($_FILES['file']['name']) ? (string)$_FILES['file']['name'] : '';
+        $ext = strtolower((string)pathinfo($originalName, PATHINFO_EXTENSION));
+        if ($ext === '') {
+            $ext = 'csv';
+        }
+
+        $stamp = date('Ymd_His');
+        try {
+            $rand = bin2hex(random_bytes(4));
+        } catch (Exception $ignore) {
+            $rand = (string)mt_rand(10000000, 99999999);
+        }
+
+        $ayToken = preg_replace('/\-+/', '-', $academicYear);
+        $semToken = preg_replace('/[^a-z0-9]+/i', '', $semesterToken);
+
+        $fileName = 'previous_' . $type . '_AY' . $ayToken . '_' . $semToken . '_' . $stamp . '_' . $rand . '.' . preg_replace('/[^a-z0-9]+/i', '', $ext);
+        if (substr($fileName, -1) === '.') {
+            $fileName .= 'csv';
+        }
+        $targetPath = $historicalDir . '/' . $fileName;
+
+        if (!move_uploaded_file($tmpPath, $targetPath)) {
+            json_response(500, ['status' => 'error', 'message' => 'Failed to store uploaded file as historical dataset.']);
+        }
+
+        // Sidecar metadata (best-effort)
+        try {
+            $meta = [
+                'dataset_scope' => 'previous',
+                'type' => $type,
+                'academic_year' => $academicYearRaw,
+                'semester' => $semesterRaw,
+                'stored_as' => 'files/historical/' . $fileName,
+                'original_name' => $originalName,
+                'uploaded_at' => date('c'),
+            ];
+            @file_put_contents($targetPath . '.meta.json', json_encode($meta, JSON_PRETTY_PRINT));
+        } catch (Exception $ignore) {
+        }
+
+        // Best-effort audit log (do not fail the upload if auditing fails)
+        try {
+            $label = ucfirst($type);
+            $auditDesc = $label . ' CSV uploaded (historical AY ' . $academicYearRaw . ', ' . $semesterRaw . ')';
+            $insertAudit = $pdo->prepare('INSERT INTO audit_logs (action_type, description, user) VALUES (?, ?, ?)');
+            $insertAudit->execute([
+                'File Upload',
+                $auditDesc,
+                'Program Chair',
+            ]);
+        } catch (Exception $ignore) {
+        }
+
+        json_response(200, [
+            'status' => 'success',
+            'type' => $type,
+            'dataset_scope' => 'previous',
+            'academic_year' => $academicYearRaw,
+            'semester' => $semesterRaw,
+            'saved_only' => true,
+            'stored_as' => 'files/historical/' . $fileName,
+            'message' => 'Saved as historical dataset for forecasting (not imported into current scheduling data).',
+        ]);
+    }
 
     $handle = fopen($tmpPath, 'r');
     if ($handle === false) {

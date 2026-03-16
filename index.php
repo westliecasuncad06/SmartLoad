@@ -393,6 +393,32 @@ try {
                             </div>
                         </div>
                         <div class="p-6">
+                            <div class="mb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                    <label class="flex items-center gap-2 text-sm text-slate-700 select-none">
+                                        <input type="checkbox" id="uploadPreviousToggle" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span>Uploading previous AY/Sem (historical data)</span>
+                                    </label>
+
+                                    <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                        <div class="flex items-center gap-2">
+                                            <label for="uploadAcademicYear" class="text-xs text-slate-600 whitespace-nowrap">Academic Year</label>
+                                            <input id="uploadAcademicYear" type="text" placeholder="e.g., 2025-2026" disabled class="w-40 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:text-slate-500">
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <label for="uploadSemester" class="text-xs text-slate-600 whitespace-nowrap">Semester</label>
+                                            <select id="uploadSemester" disabled class="w-44 pl-3 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none bg-white disabled:bg-slate-100 disabled:text-slate-500">
+                                                <option value="">Select</option>
+                                                <option value="1st">1st Semester</option>
+                                                <option value="2nd">2nd Semester</option>
+                                                <option value="summer">Summer</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="text-xs text-slate-500">Historical uploads are saved for forecasting and won’t change current scheduling data.</p>
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <!-- Upload Teachers -->
                                 <div class="upload-zone border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all cursor-pointer group" id="teacherUpload">
