@@ -55,6 +55,9 @@ let conflictModalState = {
     rowsInserted: 0,
 };
 
+// When enabled by a feature (e.g. Teachers CSV import), resolving conflicts will reload the page.
+let reloadAfterConflictResolve = false;
+
 function openModal(assignmentId) {
     currentAssignmentId = assignmentId || null;
     document.getElementById('overrideModal').classList.remove('hidden');
@@ -88,13 +91,14 @@ function openConflictModal() {
 function closeConflictModal() {
     document.getElementById('conflictModal').classList.add('hidden');
     conflictModalState = { type: null, file: null, conflicts: [], rowsInserted: 0 };
+    reloadAfterConflictResolve = false;
     const tbody = document.getElementById('conflictTableBody');
     if (tbody) tbody.innerHTML = '';
 }
 
 // Close modals when clicking outside
 document.addEventListener('DOMContentLoaded', function () {
-    ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal'].forEach(modalId => {
+    ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal', 'teacherImportModal', 'teacherAddModal', 'teacherViewModal', 'teacherEditModal'].forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.addEventListener('click', function (e) {
@@ -107,7 +111,263 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize file upload zones
     initFileUploads();
+
+    // Initialize Teachers page actions/modals
+    initTeachersPage();
 });
+
+// --------------------------------------------------
+// Teachers Page - Modals & Actions
+// --------------------------------------------------
+function openTeacherModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeTeacherModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.add('hidden');
+}
+
+function getTeacherFromDataset(el) {
+    const d = el && el.dataset ? el.dataset : {};
+    return {
+        id: d.teacherId ? Number(d.teacherId) : 0,
+        name: d.teacherName || '',
+        email: d.teacherEmail || '',
+        type: d.teacherType || '',
+        max_units: d.teacherMaxUnits !== undefined ? Number(d.teacherMaxUnits) : 0,
+        current_units: d.teacherCurrentUnits !== undefined ? Number(d.teacherCurrentUnits) : 0,
+        expertise_tags: d.teacherExpertiseTags || '',
+    };
+}
+
+async function postJson(url, payload) {
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {}),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error((data && data.message) ? data.message : 'Request failed.');
+    }
+    return data;
+}
+
+function initTeachersPage() {
+    const btnImport = document.getElementById('btnTeacherImport');
+    const btnAdd = document.getElementById('btnTeacherAdd');
+
+    // If page isn't present (e.g. standalone pages), do nothing.
+    if (!btnImport && !btnAdd && !document.getElementById('page-teachers')) return;
+
+    // -------- Import CSV Modal --------
+    if (btnImport) {
+        btnImport.addEventListener('click', () => openTeacherModal('teacherImportModal'));
+    }
+
+    ['btnTeacherImportClose', 'btnTeacherImportCancel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => closeTeacherModal('teacherImportModal'));
+    });
+
+    const importUploadBtn = document.getElementById('btnTeacherImportUpload');
+    if (importUploadBtn) {
+        importUploadBtn.addEventListener('click', async () => {
+            const input = document.getElementById('teacherCsvFileInput');
+            if (!input || !input.files || !input.files.length) {
+                alert('Please select a CSV file to upload.');
+                return;
+            }
+            const file = input.files[0];
+            importUploadBtn.disabled = true;
+            importUploadBtn.textContent = 'Uploading...';
+            try {
+                const data = await uploadFile(file, 'teacher');
+                closeTeacherModal('teacherImportModal');
+
+                if (data && data.status === 'conflict') {
+                    reloadAfterConflictResolve = true;
+                    showUploadConflicts('teacher', file, data);
+                    return;
+                }
+
+                location.reload();
+            } catch (err) {
+                alert('Upload failed: ' + (err && err.message ? err.message : String(err)));
+            } finally {
+                importUploadBtn.disabled = false;
+                importUploadBtn.textContent = 'Upload';
+            }
+        });
+    }
+
+    // -------- Add Teacher Modal --------
+    if (btnAdd) {
+        btnAdd.addEventListener('click', () => {
+            const form = document.getElementById('teacherAddForm');
+            if (form) form.reset();
+            openTeacherModal('teacherAddModal');
+        });
+    }
+
+    ['btnTeacherAddClose', 'btnTeacherAddCancel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => closeTeacherModal('teacherAddModal'));
+    });
+
+    const addForm = document.getElementById('teacherAddForm');
+    if (addForm) {
+        addForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: (document.getElementById('addTeacherName') || {}).value || '',
+                email: (document.getElementById('addTeacherEmail') || {}).value || '',
+                type: (document.getElementById('addTeacherType') || {}).value || 'Full-time',
+                max_units: Number((document.getElementById('addTeacherMaxUnits') || {}).value || 0),
+                expertise_tags: (document.getElementById('addTeacherExpertise') || {}).value || '',
+            };
+
+            if (!payload.name.trim() || !payload.email.trim()) {
+                alert('Name and Email are required.');
+                return;
+            }
+
+            const saveBtn = document.getElementById('btnTeacherAddSave');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+            }
+
+            try {
+                const data = await postJson('api/add_teacher.php', payload);
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Failed to add teacher.');
+                }
+                closeTeacherModal('teacherAddModal');
+                location.reload();
+            } catch (err) {
+                alert('Add failed: ' + (err && err.message ? err.message : String(err)));
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                }
+            }
+        });
+    }
+
+    // -------- View / Edit / Archive Row Actions --------
+    document.querySelectorAll('.teacher-action-view').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const t = getTeacherFromDataset(btn);
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            set('viewTeacherName', t.name || '—');
+            set('viewTeacherEmail', t.email || '—');
+            set('viewTeacherType', t.type || '—');
+            set('viewTeacherMaxUnits', String(t.max_units));
+            set('viewTeacherCurrentUnits', String(t.current_units));
+            set('viewTeacherExpertise', (t.expertise_tags || '').trim() || '—');
+            openTeacherModal('teacherViewModal');
+        });
+    });
+
+    ['btnTeacherViewClose', 'btnTeacherViewOk'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => closeTeacherModal('teacherViewModal'));
+    });
+
+    document.querySelectorAll('.teacher-action-edit').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const t = getTeacherFromDataset(btn);
+            const idEl = document.getElementById('editTeacherId');
+            const nameEl = document.getElementById('editTeacherName');
+            const emailEl = document.getElementById('editTeacherEmail');
+            const typeEl = document.getElementById('editTeacherType');
+            const maxEl = document.getElementById('editTeacherMaxUnits');
+            const expEl = document.getElementById('editTeacherExpertise');
+            if (idEl) idEl.value = String(t.id);
+            if (nameEl) nameEl.value = t.name || '';
+            if (emailEl) emailEl.value = t.email || '';
+            if (typeEl) typeEl.value = t.type || 'Full-time';
+            if (maxEl) maxEl.value = String(t.max_units || 0);
+            if (expEl) expEl.value = t.expertise_tags || '';
+            openTeacherModal('teacherEditModal');
+        });
+    });
+
+    ['btnTeacherEditClose', 'btnTeacherEditCancel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => closeTeacherModal('teacherEditModal'));
+    });
+
+    const editForm = document.getElementById('teacherEditForm');
+    if (editForm) {
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const payload = {
+                id: Number((document.getElementById('editTeacherId') || {}).value || 0),
+                name: (document.getElementById('editTeacherName') || {}).value || '',
+                email: (document.getElementById('editTeacherEmail') || {}).value || '',
+                type: (document.getElementById('editTeacherType') || {}).value || 'Full-time',
+                max_units: Number((document.getElementById('editTeacherMaxUnits') || {}).value || 0),
+                expertise_tags: (document.getElementById('editTeacherExpertise') || {}).value || '',
+            };
+
+            if (!payload.id || !payload.name.trim() || !payload.email.trim()) {
+                alert('ID, Name and Email are required.');
+                return;
+            }
+
+            const saveBtn = document.getElementById('btnTeacherEditSave');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+            }
+
+            try {
+                const data = await postJson('api/update_teacher.php', payload);
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Failed to update teacher.');
+                }
+                closeTeacherModal('teacherEditModal');
+                location.reload();
+            } catch (err) {
+                alert('Update failed: ' + (err && err.message ? err.message : String(err)));
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                }
+            }
+        });
+    }
+
+    document.querySelectorAll('.teacher-action-archive').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = Number(btn.dataset.teacherId || 0);
+            const name = btn.dataset.teacherName || '';
+            if (!id) return;
+            if (!confirm('Archive this teacher?')) return;
+            try {
+                const data = await postJson('api/archive_teacher.php', { id });
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Failed to archive teacher.');
+                }
+                alert((name ? name + ' ' : '') + 'archived successfully.');
+                location.reload();
+            } catch (err) {
+                alert('Archive failed: ' + (err && err.message ? err.message : String(err)));
+            }
+        });
+    });
+}
 
 // --------------------------------------------------
 // File Upload Handling
@@ -309,7 +569,11 @@ async function resolveConflictUpdate() {
 
     try {
         const data = await uploadFile(conflictModalState.file, conflictModalState.type, { conflict_action: 'update' });
+        const shouldReload = reloadAfterConflictResolve;
         closeConflictModal();
+        if (shouldReload) {
+            location.reload();
+        }
         // Success alert already shown by uploadFile
         return data;
     } catch (err) {
@@ -322,7 +586,11 @@ async function resolveConflictUpdate() {
 
 function resolveConflictKeep() {
     // Keep existing records; we already inserted the non-duplicates.
+    const shouldReload = reloadAfterConflictResolve;
     closeConflictModal();
+    if (shouldReload) {
+        location.reload();
+    }
 }
 
 function removeFile(type) {

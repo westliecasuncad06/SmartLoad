@@ -3,15 +3,19 @@ require_once __DIR__ . '/includes/db.php';
 
 // Fetch dashboard stats from database
 try {
-    $totalTeachers    = $pdo->query("SELECT COUNT(*) FROM teachers")->fetchColumn();
+    $totalTeachers    = $pdo->query("SELECT COUNT(*) FROM teachers WHERE is_archived = 0")->fetchColumn();
+    $fullTimeCount    = $pdo->query("SELECT COUNT(*) FROM teachers WHERE is_archived = 0 AND type = 'Full-time'")->fetchColumn();
+    $partTimeCount    = $pdo->query("SELECT COUNT(*) FROM teachers WHERE is_archived = 0 AND type = 'Part-time'")->fetchColumn();
     $totalSubjects    = $pdo->query("SELECT COUNT(*) FROM subjects")->fetchColumn();
     $totalUnits       = $pdo->query("SELECT COALESCE(SUM(units), 0) FROM subjects")->fetchColumn();
     $assignedSubjects = $pdo->query("SELECT COUNT(DISTINCT subject_id) FROM assignments")->fetchColumn();
-    $overloadCount    = $pdo->query("SELECT COUNT(*) FROM teachers WHERE current_units > max_units")->fetchColumn();
+    $overloadCount    = $pdo->query("SELECT COUNT(*) FROM teachers WHERE is_archived = 0 AND current_units > max_units")->fetchColumn();
     $recentLogs       = $pdo->query("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 10")->fetchAll();
 } catch (PDOException $e) {
     // Use fallback values when DB is not yet set up
     $totalTeachers    = 0;
+    $fullTimeCount    = 0;
+    $partTimeCount    = 0;
     $totalSubjects    = 0;
     $totalUnits       = 0;
     $assignedSubjects = 0;
@@ -117,7 +121,7 @@ try {
     // All teachers with load info
     $reportTeachers = $pdo->query("
         SELECT id, name, type, current_units, max_units, expertise_tags
-        FROM teachers ORDER BY name ASC
+        FROM teachers WHERE is_archived = 0 ORDER BY name ASC
     ")->fetchAll(PDO::FETCH_ASSOC);
 
     // Subjects with assigned teacher
@@ -135,14 +139,14 @@ try {
         SELECT t.id, t.name, t.type, t.current_units, t.max_units,
                (t.current_units - t.max_units) AS excess_units
         FROM teachers t
-        WHERE t.current_units > t.max_units
+        WHERE t.is_archived = 0 AND t.current_units > t.max_units
         ORDER BY excess_units DESC
     ")->fetchAll(PDO::FETCH_ASSOC);
 
     // Quick stats
-    $totalMaxUnits   = $pdo->query("SELECT COALESCE(SUM(max_units),0) FROM teachers")->fetchColumn();
-    $totalCurrUnits  = $pdo->query("SELECT COALESCE(SUM(current_units),0) FROM teachers")->fetchColumn();
-    $atCapacityCount = $pdo->query("SELECT COUNT(*) FROM teachers WHERE current_units = max_units")->fetchColumn();
+    $totalMaxUnits   = $pdo->query("SELECT COALESCE(SUM(max_units),0) FROM teachers WHERE is_archived = 0")->fetchColumn();
+    $totalCurrUnits  = $pdo->query("SELECT COALESCE(SUM(current_units),0) FROM teachers WHERE is_archived = 0")->fetchColumn();
+    $atCapacityCount = $pdo->query("SELECT COUNT(*) FROM teachers WHERE is_archived = 0 AND current_units = max_units")->fetchColumn();
     $avgLoad         = $totalTeachers > 0 ? round($totalCurrUnits / $totalTeachers, 1) : 0;
     $availableUnits  = $totalMaxUnits - $totalCurrUnits;
     $utilization     = $totalMaxUnits > 0 ? round(($totalCurrUnits / $totalMaxUnits) * 100, 1) : 0;

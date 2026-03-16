@@ -9,6 +9,7 @@ CREATE TABLE teachers (
     max_units TINYINT UNSIGNED NOT NULL,
     current_units TINYINT UNSIGNED NOT NULL DEFAULT 0,
     expertise_tags VARCHAR(255) DEFAULT NULL,
+    is_archived TINYINT(1) NOT NULL DEFAULT 0,
     INDEX idx_teachers_type (type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -70,3 +71,6 @@ CREATE TABLE audit_logs (
     INDEX idx_audit_user (user),
     INDEX idx_audit_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Migration for existing databases:
+-- ALTER TABLE teachers ADD COLUMN is_archived TINYINT(1) NOT NULL DEFAULT 0;

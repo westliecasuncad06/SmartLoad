@@ -290,6 +290,30 @@ try {
         }
     }
 
+    // Audit log (include both successful uploads and uploads with detected conflicts)
+    try {
+        $label = ucfirst($type);
+        $descParts = [];
+        $descParts[] = $label . ' CSV uploaded';
+        $descParts[] = $insertedCount . ' inserted';
+        if ($rowsUpdated > 0) {
+            $descParts[] = $rowsUpdated . ' updated';
+        }
+        if (!empty($conflicts)) {
+            $descParts[] = count($conflicts) . ' duplicates detected';
+        }
+        $auditDesc = implode(', ', $descParts);
+
+        $insertAudit = $pdo->prepare('INSERT INTO audit_logs (action_type, description, user) VALUES (?, ?, ?)');
+        $insertAudit->execute([
+            'File Upload',
+            $auditDesc,
+            'Program Chair',
+        ]);
+    } catch (Exception $ignore) {
+        // Do not block upload on audit logging issues
+    }
+
     $pdo->commit();
 
     if ($conflictAction === 'detect' && !empty($conflicts)) {
