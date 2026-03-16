@@ -796,17 +796,17 @@ try {
                             </table>
                         </div>
                         <!-- Pagination -->
-                        <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <div id="dashboardPaginationBar" class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
                             <div class="flex items-center gap-4">
-                                <span class="text-sm text-slate-600">Showing <?php echo count($teacherAssignments) + count($unassignedSubjects); ?> entries</span>
-                                <select class="text-sm border border-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <span id="dashboardShowing" class="text-sm text-slate-600">Showing <?php echo count($teacherAssignments) + count($unassignedSubjects); ?> entries</span>
+                                <select id="dashboardPageSize" class="text-sm border border-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                     <option>10 per page</option>
                                     <option>25 per page</option>
                                     <option>50 per page</option>
                                     <option>100 per page</option>
                                 </select>
                             </div>
-                            <div class="flex items-center gap-1">
+                            <div id="dashboardPagination" class="flex items-center gap-1">
                                 <button class="px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50" disabled><i class="fas fa-chevron-left text-xs"></i></button>
                                 <button class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg">1</button>
                                 <button class="px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors">2</button>

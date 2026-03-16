@@ -302,6 +302,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize dashboard controls (filters/export/actions)
     initDashboardReport();
+
+    // Initialize pagination (Dashboard / Teachers / Subjects / Audit Trail)
+    initSmartPagination();
 });
 
 // --------------------------------------------------
@@ -329,8 +332,11 @@ function applyDashboardStatusFilter(tbody, status) {
     tbody.querySelectorAll('tr').forEach(tr => {
         const rowStatus = normalizeDashboardStatus(tr.dataset.status || '');
         const show = (wanted === 'all' || wanted === '' || rowStatus === wanted);
-        tr.style.display = show ? '' : 'none';
+        tr.dataset.filterHidden = show ? '0' : '1';
     });
+
+    // Let pagination decide what to show.
+    refreshSmartPagination('dashboard');
 }
 
 function downloadBlob(filename, blob) {
@@ -540,6 +546,228 @@ function initDashboardReport() {
         } catch (err) {
             alert('Failed to load details: ' + (err && err.message ? err.message : String(err)));
         }
+    });
+}
+
+// --------------------------------------------------
+// Pagination (Dashboard / Teachers / Subjects / Audit)
+// --------------------------------------------------
+const __smartPaginators = {};
+
+function refreshSmartPagination(key) {
+    const p = __smartPaginators[key];
+    if (p && typeof p.refresh === 'function') {
+        p.refresh();
+    }
+}
+
+function parsePageSizeFromSelect(selectEl, fallback) {
+    if (!selectEl) return fallback;
+    const opt = selectEl.options && selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null;
+    const text = (opt && opt.textContent) ? opt.textContent : String(selectEl.value || '');
+    const m = text.match(/\d+/);
+    const n = m ? Number(m[0]) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function buildPaginationModel(currentPage, totalPages) {
+    const page = Math.max(1, Math.min(totalPages, currentPage));
+    const pages = [];
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+        return { page, pages };
+    }
+
+    const windowSize = 1; // show current +/- 1
+    const left = Math.max(2, page - windowSize);
+    const right = Math.min(totalPages - 1, page + windowSize);
+
+    pages.push(1);
+    if (left > 2) pages.push(null);
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < totalPages - 1) pages.push(null);
+    pages.push(totalPages);
+
+    return { page, pages };
+}
+
+function renderPaginationControls(paginationEl, currentPage, totalPages, onPageChange) {
+    if (!paginationEl) return;
+    paginationEl.innerHTML = '';
+
+    const makeBtn = ({ label, html, disabled, active, onClick }) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.disabled = !!disabled;
+        if (active) {
+            btn.className = 'px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg';
+        } else {
+            btn.className = 'px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50';
+        }
+        if (label) btn.setAttribute('aria-label', label);
+        if (html) btn.innerHTML = html;
+        if (onClick) btn.addEventListener('click', onClick);
+        return btn;
+    };
+
+    // Prev
+    paginationEl.appendChild(makeBtn({
+        label: 'Previous page',
+        html: '<i class="fas fa-chevron-left text-xs"></i>',
+        disabled: currentPage <= 1,
+        active: false,
+        onClick: () => onPageChange(currentPage - 1),
+    }));
+
+    const model = buildPaginationModel(currentPage, totalPages);
+    model.pages.forEach(p => {
+        if (p === null) {
+            const span = document.createElement('span');
+            span.className = 'px-2 text-slate-400';
+            span.textContent = '...';
+            paginationEl.appendChild(span);
+            return;
+        }
+        paginationEl.appendChild(makeBtn({
+            label: 'Page ' + p,
+            html: String(p),
+            disabled: false,
+            active: p === model.page,
+            onClick: () => onPageChange(p),
+        }));
+    });
+
+    // Next
+    paginationEl.appendChild(makeBtn({
+        label: 'Next page',
+        html: '<i class="fas fa-chevron-right text-xs"></i>',
+        disabled: currentPage >= totalPages,
+        active: false,
+        onClick: () => onPageChange(currentPage + 1),
+    }));
+}
+
+function setupListPaginator(key, options) {
+    const {
+        containerEl,
+        itemSelector,
+        paginationEl,
+        showingEl,
+        pageSizeEl,
+        defaultPageSize,
+        label,
+        isItemFilteredOut,
+    } = options;
+
+    if (!containerEl || !paginationEl) return;
+
+    const state = {
+        page: 1,
+        pageSize: defaultPageSize,
+    };
+
+    const getItems = () => Array.from(containerEl.querySelectorAll(itemSelector));
+    const isFilteredOut = (el) => (isItemFilteredOut ? !!isItemFilteredOut(el) : false);
+
+    const refresh = () => {
+        if (pageSizeEl) {
+            state.pageSize = parsePageSizeFromSelect(pageSizeEl, state.pageSize);
+        }
+
+        const items = getItems();
+        const eligible = items.filter(el => !isFilteredOut(el));
+        const total = eligible.length;
+        const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
+        state.page = Math.max(1, Math.min(state.page, totalPages));
+
+        const startIdx = (state.page - 1) * state.pageSize;
+        const endIdx = startIdx + state.pageSize;
+
+        // Hide all filtered-out items.
+        items.forEach(el => {
+            if (isFilteredOut(el)) el.style.display = 'none';
+        });
+
+        // Page eligible items.
+        eligible.forEach((el, idx) => {
+            const show = idx >= startIdx && idx < endIdx;
+            el.style.display = show ? '' : 'none';
+        });
+
+        if (showingEl) {
+            if (total === 0) {
+                showingEl.textContent = 'Showing 0 ' + label;
+            } else {
+                const from = startIdx + 1;
+                const to = Math.min(endIdx, total);
+                showingEl.textContent = `Showing ${from}-${to} of ${total} ${label}`;
+            }
+        }
+
+        renderPaginationControls(paginationEl, state.page, totalPages, (nextPage) => {
+            state.page = nextPage;
+            refresh();
+        });
+    };
+
+    if (pageSizeEl) {
+        pageSizeEl.addEventListener('change', () => {
+            state.page = 1;
+            refresh();
+        });
+    }
+
+    __smartPaginators[key] = { refresh };
+    refresh();
+}
+
+function initSmartPagination() {
+    // Dashboard table pagination (works with status filter via data-filter-hidden)
+    setupListPaginator('dashboard', {
+        containerEl: document.getElementById('dashboardReportTbody'),
+        itemSelector: 'tr',
+        paginationEl: document.getElementById('dashboardPagination'),
+        showingEl: document.getElementById('dashboardShowing'),
+        pageSizeEl: document.getElementById('dashboardPageSize'),
+        defaultPageSize: 10,
+        label: 'entries',
+        isItemFilteredOut: (tr) => String(tr.dataset.filterHidden || '0') === '1',
+    });
+
+    // Teachers table pagination
+    setupListPaginator('teachers', {
+        containerEl: document.getElementById('teacherTableBody'),
+        itemSelector: 'tr',
+        paginationEl: document.getElementById('teacherPagination'),
+        showingEl: document.getElementById('teacherShowing'),
+        pageSizeEl: null,
+        defaultPageSize: 10,
+        label: 'teachers',
+        isItemFilteredOut: null,
+    });
+
+    // Subjects table pagination
+    setupListPaginator('subjects', {
+        containerEl: document.getElementById('subjectTableBody'),
+        itemSelector: 'tr',
+        paginationEl: document.getElementById('subjectPagination'),
+        showingEl: document.getElementById('subjectShowing'),
+        pageSizeEl: null,
+        defaultPageSize: 10,
+        label: 'subjects',
+        isItemFilteredOut: null,
+    });
+
+    // Audit trail pagination (list items)
+    setupListPaginator('audit', {
+        containerEl: document.getElementById('auditLogList'),
+        itemSelector: '.audit-log-item',
+        paginationEl: document.getElementById('auditPagination'),
+        showingEl: document.getElementById('auditShowing'),
+        pageSizeEl: null,
+        defaultPageSize: 10,
+        label: 'entries',
+        isItemFilteredOut: null,
     });
 }
 
@@ -756,6 +984,7 @@ function initTeacherFilters() {
             const teachers = Array.isArray(data.teachers) ? data.teachers : [];
             tbody.innerHTML = teachers.map(buildTeacherRowHtml).join('');
             wireTeacherRowButtons(tbody);
+            refreshSmartPagination('teachers');
         } catch (err) {
             if (err && err.name === 'AbortError') return;
             console.error(err);
@@ -928,6 +1157,7 @@ function initSubjectFilters() {
             const subjects = Array.isArray(data.subjects) ? data.subjects : [];
             tbody.innerHTML = subjects.map(buildSubjectRowHtml).join('');
             wireSubjectRowButtons(tbody);
+            refreshSmartPagination('subjects');
         } catch (err) {
             if (err && err.name === 'AbortError') return;
             console.error(err);

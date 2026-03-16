@@ -161,9 +161,9 @@
                 </tbody>
             </table>
         </div>
-        <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span class="text-sm text-slate-600">Showing <?php echo (int)$totalSubjects; ?> of <?php echo (int)$totalSubjects; ?> subjects</span>
-            <div class="flex items-center gap-1">
+        <div id="subjectPaginationBar" class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <span id="subjectShowing" class="text-sm text-slate-600">Showing <?php echo (int)$totalSubjects; ?> of <?php echo (int)$totalSubjects; ?> subjects</span>
+            <div id="subjectPagination" class="flex items-center gap-1">
                 <button class="px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50" disabled><i class="fas fa-chevron-left text-xs"></i></button>
                 <button class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg">1</button>
                 <button class="px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors">2</button>
