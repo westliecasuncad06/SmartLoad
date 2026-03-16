@@ -2,11 +2,13 @@
 
 Last updated: March 16, 2026
 
-## Scope
+## Purpose
 
-This document describes the current SmartLoad workspace, including the PHP UI layer, the backend API endpoints, the Gemini integration utility, and the MySQL schema used by the application.
+SmartLoad is a PHP and MySQL faculty scheduling system for managing teachers, subjects, schedule slots, generated teaching assignments, manual overrides, and audit history.
 
-## Current File Inventory
+The current codebase is no longer only a UI prototype. It now includes working backend endpoints for CSV import, AI-assisted schedule generation, and manual reassignment.
+
+## Workspace Structure
 
 ```text
 SmartLoad/
@@ -36,9 +38,458 @@ SmartLoad/
 `-- uploads/
 ```
 
-## System Overview
+## Stack
 
-SmartLoad is a PHP-based faculty scheduling application prototype with a dashboard-style UI and a small backend API layer.
+- PHP with PDO
+- MySQL / MariaDB
+- Tailwind CSS via CDN
+- Font Awesome via CDN
+- Plain JavaScript with `fetch`
+- Google Gemini API through PHP cURL
+
+## Current Architecture
+
+### 1. Entry point
+
+`index.php` is the main application entry point. It:
+- loads the shared PDO connection from `includes/db.php`
+- queries dashboard summary metrics from the database
+- fetches the 10 most recent audit log entries for dashboard display
+- renders the full admin shell and includes the page partials under `includes/pages/`
+
+If database queries fail during page bootstrap, the file falls back to zeroed counters and an empty audit list so the interface can still render.
+
+### 2. Shared database bootstrap
+
+`includes/db.php` defines:
+- MySQL connection settings for a local XAMPP environment
+- a global `$pdo` connection
+- `GEMINI_API_KEY`
+
+The file enables exception-based PDO error handling and disables emulated prepared statements.
+
+### 3. Frontend behavior
+
+`js/app.js` provides the browser-side behavior for:
+- switching sections inside the single-page dashboard shell
+- updating sidebar active state and breadcrumb text
+- opening and closing modals
+- drag and drop upload handling
+- CSV upload requests to `api/upload.php`
+- schedule generation requests to `api/generate_schedule.php`
+- manual override requests to `api/override.php`
+- `Ctrl+K` / `Cmd+K` search focus shortcut
+
+### 4. Backend API layer
+
+The `api/` directory exposes JSON endpoints used by the frontend:
+
+- `api/upload.php`
+- `api/generate_schedule.php`
+- `api/override.php`
+
+All endpoints require the shared PDO connection from `includes/db.php`.
+
+### 5. AI scoring utility
+
+`includes/GeminiAPI.php` contains a `GeminiEvaluator` class. It sends a teacher-versus-subject comparison prompt to Gemini and expects a strict JSON response with:
+- `score`
+- `rationale`
+
+This utility is actively used by `api/generate_schedule.php` during assignment scoring.
+
+## Main User Interface Modules
+
+### Dashboard
+
+The dashboard in `index.php` mixes live and static values.
+
+Live values:
+
+- total teachers
+- total subjects
+- total subject units
+- assigned subject count
+- overload count
+- recent audit logs
+
+Static or placeholder UI values still present:
+
+- some growth badges such as `+3 new`
+- `Last generated: Today, 2:45 PM`
+- generation time card value `2.3s`
+- notification count
+
+### Teachers Page
+
+`includes/pages/teachers.php` renders live teacher rows from the `teachers` table and displays:
+
+- teacher name
+- email
+- expertise tags
+- employment type
+- current versus maximum load
+- overload highlighting when `current_units > max_units`
+
+Current limitation:
+
+- the summary cards for full-time and part-time counts are still hard-coded as `38` and `4`
+- action buttons are visual only
+
+### Subjects Page
+
+`includes/pages/subjects.php` renders live subject rows from the `subjects` table.
+
+Visible fields:
+
+- course code
+- subject name
+- program
+- units
+- prerequisites
+
+Current limitation:
+
+- the per-row `Assigned To` and `Status` values are still placeholder UI and are not joined against the `assignments` table
+- action buttons are visual only
+
+### Schedules Page
+
+`includes/pages/schedules.php` renders a weekly schedule grid from the `schedules` table joined to `subjects` and optionally to `assignments` and `teachers`.
+
+The page currently:
+
+- groups classes by `day_of_week` and `start_time`
+- shows subject code, subject name, assigned teacher if available, and room
+- builds teacher and room filter dropdowns from live data
+
+Current limitation:
+
+- the teacher and room filter controls do not currently apply filtering logic
+- the legend is static and not derived from database data
+
+### Load Reports Page
+
+`includes/pages/loadreports.php` is still mostly presentation-only.
+
+It currently uses live totals for some counters such as:
+
+- total teachers
+- total subjects
+- overload count
+
+Current limitation:
+
+- charts, utilization values, averages, and export buttons are placeholder UI
+
+### Audit Trail Page
+
+`includes/pages/audittrail.php` renders live audit records from the `audit_logs` table.
+
+The page currently:
+
+- fetches the 50 most recent entries
+- maps action types to icon and badge styles
+- displays user and timestamp information
+- shows an empty state when no records exist
+
+Current limitation:
+
+- date range and dropdown filters are visual only
+- export and details actions are not implemented
+
+## API Documentation
+
+### `POST /api/upload.php`
+
+Imports CSV data into one of the main tables.
+
+Request format:
+
+- `multipart/form-data`
+- fields:
+	- `type`: `teacher`, `subject`, or `schedule`
+	- `file`: uploaded CSV file
+
+Accepted request methods:
+
+- `POST` only
+
+Response format:
+
+```json
+{
+	"status": "success",
+	"rows_inserted": 10
+}
+```
+
+Supported CSV layouts:
+
+`type=teacher`
+
+- `name`
+- `email`
+- `type`
+- `max_units`
+- `expertise_tags` optional
+
+`type=subject`
+
+- `course_code`
+- `name`
+- `program`
+- `units`
+- `prerequisites` optional
+
+`type=schedule`
+
+- `subject_id`
+- `day_of_week`
+- `start_time`
+- `end_time`
+- `room`
+
+Processing notes:
+
+- the first CSV row is skipped as a header row
+- inserts run inside a transaction
+- rows with missing minimum columns are skipped
+
+Current limitations:
+
+- although the UI says CSV or Excel, the backend currently parses CSV only through `fgetcsv()`
+- uploads are inserted directly without deduplication or upsert logic
+- this endpoint does not currently create an audit log entry for uploads
+
+### `POST /api/generate_schedule.php`
+
+Generates pending assignments for subjects that the query currently treats as unassigned.
+
+Processing flow:
+
+1. Fetch subjects without an existing `Pending` or `Approved` assignment.
+2. For each subject, find teachers whose `current_units + subject.units <= max_units`.
+3. Score each eligible teacher using `GeminiEvaluator::scoreExpertise()`.
+4. Insert a new `assignments` row with status `Pending`.
+5. Increase the selected teacher's `current_units`.
+6. Insert an audit log entry with action type `Schedule Generation`.
+
+Success response:
+
+```json
+{
+	"status": "success",
+	"assigned_count": 12,
+	"unassigned_count": 3
+}
+```
+
+Important behavior notes:
+
+- the endpoint uses Gemini scoring rather than simple keyword matching
+- unit capacity is enforced before scoring
+- no schedule conflict checks are performed
+- `teacher_availability` is not consulted
+
+Current limitation:
+
+- the query only excludes `Pending` and `Approved` assignments, so rows marked `Manual` are not considered assigned by this endpoint
+
+### `POST /api/override.php`
+
+Reassigns an existing assignment to a different teacher.
+
+Request body:
+
+```json
+{
+	"assignment_id": 5,
+	"new_teacher_id": 7,
+	"reason": "Adjusted due to specialization and load balance"
+}
+```
+
+Processing flow:
+
+1. Read the current assignment and subject units.
+2. Validate the new teacher exists.
+3. Validate the new teacher has enough unit capacity.
+4. Update the assignment row to the new teacher.
+5. Set assignment status to `Manual`.
+6. Subtract units from the old teacher.
+7. Add units to the new teacher.
+8. Insert an audit log entry with action type `Manual Override`.
+
+Success response:
+
+```json
+{
+	"status": "success",
+	"message": "Assignment overridden successfully."
+}
+```
+
+## Gemini Integration
+
+`includes/GeminiAPI.php` uses the `gemini-1.5-flash:generateContent` endpoint.
+
+Prompt contract:
+
+- teacher expertise tags are compared against subject prerequisites
+- Gemini must return raw JSON only
+- the system expects exactly `score` and `rationale`
+
+Fallback behavior:
+
+- non-200 HTTP responses return a fallback score of `0`
+- malformed responses return a fallback score of `0`
+- markdown code fences are stripped if the model includes them anyway
+
+Configuration note:
+
+- `includes/db.php` still ships with `YOUR_GEMINI_API_KEY_HERE`, so a real key must be supplied before production use
+
+## Database Schema
+
+Both `database.sql` and `database/database.sql` currently define the same schema.
+
+### `teachers`
+
+Stores faculty records.
+
+Columns:
+
+- `id`
+- `name`
+- `email` unique
+- `type` enum: `Full-time`, `Part-time`
+- `max_units`
+- `current_units`
+- `expertise_tags`
+
+### `subjects`
+
+Stores the subject catalog.
+
+Columns:
+
+- `id`
+- `course_code` unique
+- `name`
+- `program`
+- `units`
+- `prerequisites`
+
+### `teacher_availability`
+
+Stores teacher time availability.
+
+Columns:
+
+- `teacher_id`
+- `day_of_week`
+- `start_time`
+- `end_time`
+
+Current limitation:
+
+- the table exists in the schema but is not currently used by the schedule generation logic or UI
+
+### `schedules`
+
+Stores class meeting slots.
+
+Columns:
+
+- `subject_id`
+- `day_of_week`
+- `start_time`
+- `end_time`
+- `room`
+
+### `assignments`
+
+Stores teacher-to-subject assignment decisions.
+
+Columns:
+
+- `subject_id`
+- `teacher_id`
+- `status`
+- `rationale`
+- `created_at`
+
+Supported status values:
+
+- `Pending`
+- `Approved`
+- `Rejected`
+- `Manual`
+
+### `audit_logs`
+
+Stores recorded system activity.
+
+Columns:
+
+- `action_type`
+- `description`
+- `user`
+- `created_at`
+
+## Setup Notes
+
+### Local environment
+
+Expected local environment:
+
+- Apache and MySQL through XAMPP or equivalent
+- PHP with PDO MySQL enabled
+- PHP cURL enabled for Gemini requests
+
+### Initial setup
+
+1. Create the `smartload` database by importing either `database.sql` or `database/database.sql`.
+2. Ensure the MySQL credentials in `includes/db.php` match the local environment.
+3. Replace `YOUR_GEMINI_API_KEY_HERE` with an actual Gemini API key if schedule generation should use AI scoring.
+4. Serve the project from the web root and open `index.php`.
+
+## Current Operational Flow
+
+1. Upload teacher, subject, and schedule CSV files from the dashboard.
+2. The frontend sends each file to `api/upload.php`.
+3. Generate assignments from the dashboard.
+4. `api/generate_schedule.php` scores eligible teachers with Gemini and inserts pending assignments.
+5. Review schedules and audit history in the UI.
+6. Reassign teachers manually through the override workflow when needed.
+
+## Known Gaps And Risks
+
+- Excel files are advertised in the UI but not parsed by the backend.
+- `teacher_availability` is not yet used in assignment generation.
+- no room conflict or teacher time conflict checks are performed.
+- upload actions are not currently written to `audit_logs`.
+- several page controls remain UI-only: filters, exports, some action buttons, and report widgets.
+- the subjects table does not yet show live assignment status per row.
+- schedule generation currently ignores assignment rows with status `Manual` when deciding whether a subject is already assigned.
+
+## File Reference Summary
+
+- `index.php`: main dashboard shell and top-level metric queries
+- `js/app.js`: frontend navigation, uploads, generation, override calls
+- `api/upload.php`: CSV import endpoint
+- `api/generate_schedule.php`: AI-assisted assignment generation endpoint
+- `api/override.php`: manual reassignment endpoint
+- `includes/db.php`: database and Gemini key configuration
+- `includes/GeminiAPI.php`: Gemini scoring helper
+- `includes/pages/*.php`: UI page partials
+- `database.sql`: primary schema definition
+- `database/database.sql`: duplicate schema copy
+
+## Summary
+
+SmartLoad currently has a working data layer for importing records, generating assignments, tracking manual overrides, and displaying audit history. The main remaining gap is that several interface sections still present placeholder or partially wired behavior around filtering, exports, reporting, and some assignment views.
 
 The system currently uses:
 
