@@ -958,3 +958,77 @@ function csvRow(fields) {
 function toText(value) {
     return value === null || value === undefined ? '' : String(value);
 }
+
+// --------------------------------------------------
+// Audit Log Export (CSV & PDF)
+// --------------------------------------------------
+async function exportAuditLogs(format) {
+    const el = document.getElementById('auditLogData');
+    if (!el) { alert('No audit log data available.'); return; }
+
+    let logs;
+    try { logs = JSON.parse(el.textContent); } catch (_) { alert('Failed to parse audit log data.'); return; }
+    if (!logs.length) { alert('No logs to export.'); return; }
+
+    // Close export dropdown
+    document.getElementById('exportMenu-audit').classList.add('hidden');
+
+    if (format === 'csv') {
+        let csv = 'Action Type,Description,User,Date/Time\n';
+        logs.forEach(l => {
+            const date = new Date(l.created_at).toLocaleString();
+            csv += csvRow([l.action_type, l.description || '', l.user, date]);
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'audit_logs_' + new Date().toISOString().split('T')[0] + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+    } else if (format === 'pdf') {
+        try {
+            await ensurePdfLibrariesLoaded();
+        } catch (_) {
+            alert('Unable to load PDF export library. Please check your internet connection and try again.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+        const headers = ['Action Type', 'Description', 'User', 'Date/Time'];
+        const body = logs.map(l => {
+            const date = new Date(l.created_at).toLocaleString();
+            return [toText(l.action_type), toText(l.description || ''), toText(l.user), toText(date)];
+        });
+
+        doc.setFontSize(16);
+        doc.text('Audit Trail Export', 40, 40);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text('SmartLoad - Generated ' + new Date().toLocaleString(), 40, 58);
+
+        doc.autoTable({
+            head: [headers],
+            body: body,
+            startY: 72,
+            styles: { fontSize: 9, cellPadding: 6, textColor: [30, 41, 59] },
+            headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            margin: { left: 40, right: 40 },
+            columnStyles: {
+                0: { cellWidth: 100 },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 80 },
+                3: { cellWidth: 120 }
+            }
+        });
+
+        doc.save('audit_logs_' + new Date().toISOString().split('T')[0] + '.pdf');
+    }
+}

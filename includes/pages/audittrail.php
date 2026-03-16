@@ -5,8 +5,12 @@
             <h2 class="text-2xl font-bold text-slate-900">Audit Trail</h2>
             <p class="text-slate-600 mt-1">Complete history of all system activities and changes</p>
         </div>
-        <div class="flex items-center gap-3">
-            <button class="flex items-center gap-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm"><i class="fas fa-file-export"></i> Export Logs</button>
+        <div class="relative inline-block">
+            <button onclick="toggleExportMenu(event,'audit')" class="flex items-center gap-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm"><i class="fas fa-file-export"></i> Export Logs <i class="fas fa-chevron-down text-[9px]"></i></button>
+            <div id="exportMenu-audit" class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                <button onclick="exportAuditLogs('csv')" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100"><i class="fas fa-file-csv text-green-600 w-4"></i>Export as CSV</button>
+                <button onclick="exportAuditLogs('pdf')" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"><i class="fas fa-file-pdf text-red-500 w-4"></i>Export as PDF</button>
+            </div>
         </div>
     </div>
 
@@ -124,5 +128,8 @@
             </div>
         </div>
     </div>
+
+    <!-- Hidden data island for audit log export -->
+    <script id="auditLogData" type="application/json"><?= json_encode($auditRows, JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
 </div>
 <!-- END AUDIT TRAIL PAGE -->
