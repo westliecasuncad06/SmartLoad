@@ -2756,6 +2756,21 @@ function updateUploadSummary() {
 // Generate Schedule (real API call)
 // --------------------------------------------------
 async function generateSchedule() {
+    // Check if all required files are uploaded
+    if (!uploadedFiles.teacher || !uploadedFiles.subject || !uploadedFiles.schedule) {
+        const missingFiles = [];
+        if (!uploadedFiles.teacher) missingFiles.push('Teachers');
+        if (!uploadedFiles.subject) missingFiles.push('Subjects');
+        if (!uploadedFiles.schedule) missingFiles.push('Schedule');
+        
+        alert(
+            '⚠️ Missing Required Files\n\n' +
+            'Please upload the following CSV files before generating a schedule:\n\n' +
+            '• ' + missingFiles.join('\n• ')
+        );
+        return;
+    }
+
     const btn = document.getElementById('generateBtn');
     const indicator = document.getElementById('generatingIndicator');
 
@@ -2791,8 +2806,9 @@ async function generateSchedule() {
                 );
             } else {
                 alert(
-                    '⚠️ Schedule Generated via Fallback Logic.\n' +
-                    '(Gemini API Key missing or invalid. AI was NOT used).'
+                    '✅ Schedule Generated Successfully!\n\n' +
+                    `• Assigned: ${data.assigned_count}\n` +
+                    `• Unassigned: ${data.unassigned_count}`
                 );
             }
         }

@@ -335,7 +335,7 @@ try {
                     </div>
 
                     <!-- QUICK STATS -->
-                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                         <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200">
                             <div class="flex items-center justify-between">
                                 <div class="bg-indigo-100 p-2.5 rounded-lg"><i class="fas fa-users text-indigo-600"></i></div>
@@ -367,14 +367,6 @@ try {
                             </div>
                             <p class="text-2xl font-bold text-amber-600 mt-3"><?php echo (int)$overloadCount; ?></p>
                             <p class="text-slate-500 text-sm">Overload Flags</p>
-                        </div>
-                        <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200">
-                            <div class="flex items-center justify-between">
-                                <div class="bg-emerald-100 p-2.5 rounded-lg"><i class="fas fa-bolt text-emerald-600"></i></div>
-                                <span class="text-xs text-emerald-600 font-medium">Target: &lt;5min</span>
-                            </div>
-                            <p class="text-2xl font-bold text-emerald-600 mt-3">2.3s</p>
-                            <p class="text-slate-500 text-sm">Generation Time</p>
                         </div>
                     </div>
 

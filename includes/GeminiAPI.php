@@ -14,8 +14,8 @@ class GeminiEvaluator
     public function isEnabled(): bool
     {
         $key = trim($this->apiKey);
-        // Disabled when missing or left as placeholder.
-        if ($key === '' || $key === 'YOUR_GEMINI_API_KEY_HERE') {
+        // Disabled when missing.
+        if ($key === '') {
             return false;
         }
 
