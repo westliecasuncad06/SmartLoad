@@ -826,11 +826,18 @@ try {
                     <label class="block text-sm font-medium text-slate-900 mb-2">Reassign To</label>
                     <select class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                         <option value="">-- Select Teacher --</option>
-                        <option value="jane_smith">Jane Smith (15 units) - Expertise: Networking, Security</option>
-                        <option value="alan_turing">Alan Turing (12 units) - Expertise: Mathematics, Algorithms</option>
-                        <option value="maria_garcia">Maria Garcia (18 units) - Expertise: Literature, Writing</option>
-                        <option value="robert_johnson">Robert Johnson (9 units) - Expertise: Physics, Chemistry</option>
-                        <option value="sarah_wilson">Sarah Wilson (6 units) - Expertise: Web Dev, PHP, JavaScript</option>
+                        <?php
+                        $teacherStmt = $pdo->query("SELECT id, name, current_units, max_units, expertise_tags FROM teachers ORDER BY name ASC");
+                        while ($t = $teacherStmt->fetch(PDO::FETCH_ASSOC)):
+                            $overloaded = $t['current_units'] >= $t['max_units'] ? ' ⚠️ OVERLOADED' : '';
+                            $expertise = $t['expertise_tags'] ? htmlspecialchars($t['expertise_tags'], ENT_QUOTES, 'UTF-8') : 'N/A';
+                            $label = htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8')
+                                   . ' (' . (int)$t['current_units'] . '/' . (int)$t['max_units'] . ' units)'
+                                   . ' - Expertise: ' . $expertise
+                                   . $overloaded;
+                        ?>
+                        <option value="<?= (int)$t['id'] ?>"><?= $label ?></option>
+                        <?php endwhile; ?>
                     </select>
                 </div>
                 <div>
