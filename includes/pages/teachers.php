@@ -1,16 +1,16 @@
 <!-- TEACHERS PAGE -->
-<div id="page-teachers" class="page-content hidden p-6 space-y-6">
-    <div class="flex items-center justify-between">
+<div id="page-teachers" class="page-content hidden p-4 sm:p-6 space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h2 class="text-2xl font-bold text-slate-900">Teachers Management</h2>
-            <p class="text-slate-600 mt-1">Manage faculty members, their expertise, and availability</p>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Teachers Management</h2>
+            <p class="text-slate-600 mt-1 text-sm">Manage faculty members, their expertise, and availability</p>
         </div>
         <div class="flex items-center gap-3">
             <button id="btnTeacherImport" type="button" class="flex items-center gap-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm"><i class="fas fa-file-import"></i> Import CSV</button>
             <button id="btnTeacherAdd" type="button" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"><i class="fas fa-plus"></i> Add Teacher</button>
         </div>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200">
             <div class="bg-indigo-100 p-2.5 rounded-lg w-fit"><i class="fas fa-users text-indigo-600"></i></div>
             <p class="text-2xl font-bold text-slate-900 mt-3"><?php echo (int)$totalTeachers; ?></p>
@@ -33,12 +33,12 @@
         </div>
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-200">
-            <div class="flex items-center justify-between">
+        <div class="px-4 sm:px-6 py-4 border-b border-slate-200">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h3 class="text-lg font-semibold text-slate-900">All Teachers</h3>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <div class="relative">
-                        <input id="teacherSearch" type="text" placeholder="Search teachers..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64">
+                        <input id="teacherSearch" type="text" placeholder="Search teachers..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64">
                         <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
                     </div>
                     <select id="teacherDepartmentFilter" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -56,15 +56,7 @@
             </div>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-slate-50 border-b border-slate-200">
-                        <th class="px-6 py-3 text-left"><input type="checkbox" class="rounded border-slate-300 text-indigo-600"></th>
-                        <th class="px-6 py-3 text-left text-slate-600 font-semibold">Teacher</th>
-                        <th class="px-6 py-3 text-left text-slate-600 font-semibold">Expertise</th>
-                        <th class="px-6 py-3 text-left text-slate-600 font-semibold">Employment</th>
-                        <th class="px-6 py-3 text-left text-slate-600 font-semibold">Current Load</th>
-                        <th class="px-6 py-3 text-center text-slate-600 font-semibold">Actions</th>
+            <table class="w-full text-sm min-w-[700px]">
                     </tr>
                 </thead>
                 <tbody id="teacherTableBody">
@@ -150,7 +142,7 @@
                 </tbody>
             </table>
         </div>
-        <div id="teacherPaginationBar" class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div id="teacherPaginationBar" class="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <span id="teacherShowing" class="text-sm text-slate-600">Showing <?php echo (int)$totalTeachers; ?> of <?php echo (int)$totalTeachers; ?> teachers</span>
             <div id="teacherPagination" class="flex items-center gap-1">
                 <button class="px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50" disabled><i class="fas fa-chevron-left text-xs"></i></button>

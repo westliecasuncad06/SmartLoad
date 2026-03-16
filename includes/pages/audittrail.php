@@ -1,9 +1,9 @@
 <!-- AUDIT TRAIL PAGE -->
-<div id="page-audittrail" class="page-content hidden p-6 space-y-6">
-    <div class="flex items-center justify-between">
+<div id="page-audittrail" class="page-content hidden p-4 sm:p-6 space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h2 class="text-2xl font-bold text-slate-900">Audit Trail</h2>
-            <p class="text-slate-600 mt-1">Complete history of all system activities and changes</p>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Audit Trail</h2>
+            <p class="text-slate-600 mt-1 text-sm">Complete history of all system activities and changes</p>
         </div>
         <div class="relative inline-block">
             <button onclick="toggleExportMenu(event,'audit')" class="flex items-center gap-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm"><i class="fas fa-file-export"></i> Export Logs <i class="fas fa-chevron-down text-[9px]"></i></button>
@@ -16,8 +16,8 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-        <div class="flex flex-wrap items-center gap-4">
-            <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-end gap-3">
+            <div class="flex flex-wrap items-center gap-2">
                 <label class="text-sm text-slate-600">Date Range:</label>
                 <input type="date" value="2026-03-01" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <span class="text-slate-400">to</span>
@@ -36,7 +36,7 @@
                 <option>Program Chair</option>
                 <option>System</option>
             </select>
-            <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"><i class="fas fa-filter mr-2"></i>Apply Filters</button>
+            <button class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"><i class="fas fa-filter mr-2"></i>Apply Filters</button>
         </div>
     </div>
 
@@ -46,7 +46,7 @@
     $auditCount = count($auditRows);
     ?>
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-slate-200">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-slate-900">Activity Log</h3>
                 <span class="text-sm text-slate-500">Showing <?php echo $auditCount; ?> entries</span>
@@ -119,7 +119,7 @@
             <?php endforeach; ?>
         </div>
         <!-- Pagination -->
-        <div id="auditPaginationBar" class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div id="auditPaginationBar" class="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <span id="auditShowing" class="text-sm text-slate-600">Showing <?php echo $auditCount; ?> entries</span>
             <div id="auditPagination" class="flex items-center gap-1">
                 <button class="px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50" disabled><i class="fas fa-chevron-left text-xs"></i></button>

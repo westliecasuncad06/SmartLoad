@@ -4,9 +4,50 @@
 // ===================================================
 
 // --------------------------------------------------
+// Sidebar Toggle (Mobile/Tablet)
+// --------------------------------------------------
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const isOpen = sidebar.classList.contains('sidebar-open');
+    if (isOpen) {
+        closeSidebar();
+    } else {
+        sidebar.classList.add('sidebar-open');
+        overlay.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+    }
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.remove('sidebar-open');
+    overlay.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+}
+
+function toggleMobileSearch() {
+    const bar = document.getElementById('mobileSearchBar');
+    bar.classList.toggle('hidden');
+}
+
+// Auto-close sidebar on resize to desktop
+window.addEventListener('resize', function() {
+    if (window.innerWidth >= 1024) {
+        closeSidebar();
+    }
+});
+
+// --------------------------------------------------
 // Page Switching / Navigation
 // --------------------------------------------------
 function switchPage(pageName) {
+    // Close sidebar on mobile
+    if (window.innerWidth < 1024) {
+        closeSidebar();
+    }
+
     // Hide all pages
     document.querySelectorAll('.page-content').forEach(page => {
         page.classList.add('hidden');
@@ -30,7 +71,7 @@ function switchPage(pageName) {
         activeLink.classList.remove('text-slate-300', 'hover:bg-slate-800', 'hover:text-white');
     }
 
-    // Update breadcrumb
+    // Update breadcrumbs
     const pageNames = {
         'dashboard': 'Dashboard',
         'teachers': 'Teachers',
@@ -39,7 +80,10 @@ function switchPage(pageName) {
         'loadreports': 'Load Reports',
         'audittrail': 'Audit Trail'
     };
-    document.getElementById('breadcrumbTitle').textContent = pageNames[pageName] || 'Dashboard';
+    const title = pageNames[pageName] || 'Dashboard';
+    document.getElementById('breadcrumbTitle').textContent = title;
+    const mobileBreadcrumb = document.getElementById('mobileBreadcrumb');
+    if (mobileBreadcrumb) mobileBreadcrumb.textContent = title;
 }
 
 // --------------------------------------------------
