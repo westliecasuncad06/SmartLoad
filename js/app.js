@@ -93,13 +93,8 @@ function closeUploadConflictModal() {
     if (modal) modal.classList.add('hidden');
 
     conflictModalState = { type: null, file: null, conflicts: [], rowsInserted: 0 };
-<<<<<<< Updated upstream
     reloadAfterConflictResolve = false;
-    const tbody = document.getElementById('conflictTableBody');
-=======
-
     const tbody = document.getElementById('uploadConflictTableBody');
->>>>>>> Stashed changes
     if (tbody) tbody.innerHTML = '';
 }
 
@@ -117,15 +112,21 @@ function closeConflictModal() {
 
 // Close modals when clicking outside
 document.addEventListener('DOMContentLoaded', function () {
-<<<<<<< HEAD
-    ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal', 'teacherImportModal', 'teacherAddModal', 'teacherViewModal', 'teacherEditModal', 'subjectImportModal', 'subjectAddModal', 'subjectViewModal', 'subjectEditModal'].forEach(modalId => {
-=======
-<<<<<<< Updated upstream
-    ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal', 'teacherImportModal', 'teacherAddModal', 'teacherViewModal', 'teacherEditModal'].forEach(modalId => {
-=======
-    ['overrideModal', 'settingsModal', 'historyModal', 'uploadConflictModal', 'conflictModal'].forEach(modalId => {
->>>>>>> Stashed changes
->>>>>>> 31a54a6dd8d360494a0e46d58d57f2ddbd953048
+    [
+        'overrideModal',
+        'settingsModal',
+        'historyModal',
+        'uploadConflictModal',
+        'conflictModal',
+        'teacherImportModal',
+        'teacherAddModal',
+        'teacherViewModal',
+        'teacherEditModal',
+        'subjectImportModal',
+        'subjectAddModal',
+        'subjectViewModal',
+        'subjectEditModal',
+    ].forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.addEventListener('click', function (e) {
@@ -852,15 +853,9 @@ async function resolveConflictUpdate() {
 
     try {
         const data = await uploadFile(conflictModalState.file, conflictModalState.type, { conflict_action: 'update' });
-<<<<<<< Updated upstream
         const shouldReload = reloadAfterConflictResolve;
-        closeConflictModal();
-        if (shouldReload) {
-            location.reload();
-        }
-=======
         closeUploadConflictModal();
->>>>>>> Stashed changes
+        if (shouldReload) location.reload();
         // Success alert already shown by uploadFile
         return data;
     } catch (err) {
@@ -873,15 +868,9 @@ async function resolveConflictUpdate() {
 
 function resolveConflictKeep() {
     // Keep existing records; we already inserted the non-duplicates.
-<<<<<<< Updated upstream
     const shouldReload = reloadAfterConflictResolve;
-    closeConflictModal();
-    if (shouldReload) {
-        location.reload();
-    }
-=======
     closeUploadConflictModal();
->>>>>>> Stashed changes
+    if (shouldReload) location.reload();
 }
 
 function removeFile(type) {
