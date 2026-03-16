@@ -37,11 +37,11 @@ $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 $timeSlots = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
 ?>
 <!-- SCHEDULES PAGE -->
-<div id="page-schedules" class="page-content hidden p-6 space-y-6">
-    <div class="flex items-center justify-between">
+<div id="page-schedules" class="page-content hidden p-4 sm:p-6 space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h2 class="text-2xl font-bold text-slate-900">Schedule Management</h2>
-            <p class="text-slate-600 mt-1">View and manage class schedules by day, time, and room</p>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Schedule Management</h2>
+            <p class="text-slate-600 mt-1 text-sm">View and manage class schedules by day, time, and room</p>
         </div>
         <div class="flex items-center gap-3">
             <select class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -53,7 +53,7 @@ $timeSlots = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM
     </div>
 
     <!-- View Toggle & Filter -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
             <button class="px-4 py-2 bg-white text-slate-900 rounded-md shadow-sm text-sm font-medium">Weekly View</button>
             <button class="px-4 py-2 text-slate-600 hover:text-slate-900 rounded-md text-sm font-medium">Daily View</button>
@@ -78,11 +78,7 @@ $timeSlots = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM
     <!-- Weekly Schedule Grid -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-slate-50 border-b border-slate-200">
-                        <th class="px-4 py-3 text-left text-slate-600 font-semibold w-24">Time</th>
-                        <th class="px-4 py-3 text-center text-slate-600 font-semibold">Monday</th>
+            <table class="w-full text-sm min-w-[800px]">
                         <th class="px-4 py-3 text-center text-slate-600 font-semibold">Tuesday</th>
                         <th class="px-4 py-3 text-center text-slate-600 font-semibold">Wednesday</th>
                         <th class="px-4 py-3 text-center text-slate-600 font-semibold">Thursday</th>
@@ -123,7 +119,7 @@ $timeSlots = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM
     </div>
 
     <!-- Legend -->
-    <div class="flex items-center justify-center gap-6 text-sm">
+    <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm">
         <div class="flex items-center gap-2"><div class="w-4 h-4 bg-indigo-100 border-l-4 border-indigo-500 rounded"></div><span class="text-slate-600">Computer Science</span></div>
         <div class="flex items-center gap-2"><div class="w-4 h-4 bg-pink-100 border-l-4 border-pink-500 rounded"></div><span class="text-slate-600">IT / Networking</span></div>
         <div class="flex items-center gap-2"><div class="w-4 h-4 bg-emerald-100 border-l-4 border-emerald-500 rounded"></div><span class="text-slate-600">Mathematics</span></div>

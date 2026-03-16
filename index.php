@@ -185,8 +185,11 @@ try {
 </head>
 <body class="bg-slate-50">
     <div class="flex h-screen">
+        <!-- Sidebar Overlay (mobile) -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden" onclick="closeSidebar()"></div>
+
         <!-- SIDEBAR -->
-        <aside class="fixed left-0 top-0 h-screen w-64 bg-slate-900 text-white shadow-xl flex flex-col z-20">
+        <aside id="sidebar" class="fixed left-0 top-0 h-screen w-64 bg-slate-900 text-white shadow-xl flex flex-col z-40 sidebar-transition -translate-x-full lg:translate-x-0">
             <!-- Logo -->
             <div class="p-6 border-b border-slate-800">
                 <div class="flex items-center gap-2">
@@ -259,36 +262,46 @@ try {
         </aside>
 
         <!-- MAIN CONTENT -->
-        <main class="ml-64 flex-1 flex flex-col">
+        <main class="lg:ml-64 flex-1 flex flex-col min-w-0">
             <!-- TOP NAVBAR -->
             <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
-                <div class="flex items-center justify-between px-6 py-4">
+                <div class="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
+                    <div class="flex items-center gap-3">
+                        <!-- Hamburger toggle (mobile/tablet) -->
+                        <button onclick="toggleSidebar()" class="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" aria-label="Toggle menu">
+                            <i class="fas fa-bars text-lg"></i>
+                        </button>
+                        <!-- Desktop breadcrumb -->
+                        <div class="hidden sm:block text-sm text-slate-500">
+                            <span class="text-slate-400">SmartLoad</span>
+                            <i class="fas fa-chevron-right text-xs mx-2"></i>
+                            <span id="breadcrumbTitle" class="text-slate-700 font-medium">Dashboard</span>
+                        </div>
+                        <!-- Mobile breadcrumb -->
+                        <div id="mobileBreadcrumb" class="sm:hidden text-sm font-medium text-slate-700">Dashboard</div>
+                    </div>
 
-
-                    <div class="flex-1 max-w-lg mx-8">
+                    <div class="hidden sm:block flex-1 max-w-lg mx-4 lg:mx-8">
                         <div class="relative">
                             <input type="text" id="globalSearch" placeholder="Search teachers, subjects, schedules..." class="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                             <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
-                            <kbd class="absolute right-3 top-2 px-2 py-0.5 text-xs bg-slate-100 text-slate-500 rounded">Ctrl+K</kbd>
-                            <!-- Search Results Dropdown -->
-                            <div id="searchResultsDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-30 hidden max-h-96 overflow-y-auto">
-                                <div id="searchLoading" class="px-4 py-3 text-sm text-slate-500 hidden">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i>Searching...
-                                </div>
-                                <div id="searchNoResults" class="px-4 py-6 text-center text-sm text-slate-500 hidden">
-                                    <i class="fas fa-search text-2xl mb-2 block opacity-50"></i>
-                                    No results found
-                                </div>
-                                <div id="searchResultsList" class="divide-y divide-slate-100"></div>
-                            </div>
+                            <kbd class="absolute right-3 top-2 px-2 py-0.5 text-xs bg-slate-100 text-slate-500 rounded hidden md:inline">Ctrl+K</kbd>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 sm:gap-4">
+                        <!-- Mobile search toggle -->
+                        <button onclick="toggleMobileSearch()" class="sm:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
+                            <i class="fas fa-search"></i>
+                        </button>
                         <button onclick="openSettingsModal()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="Settings">
                             <i class="fas fa-cog"></i>
                         </button>
-                        <div class="flex items-center gap-3 pl-4 border-l border-slate-200">
+                        <button class="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
+                            <i class="fas fa-bell"></i>
+                            <span class="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">3</span>
+                        </button>
+                        <div class="hidden sm:flex items-center gap-3 pl-4 border-l border-slate-200">
                             <div class="w-9 h-9 bg-gradient-to-br from-indigo-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                                 PC
                             </div>
@@ -300,20 +313,27 @@ try {
                         </div>
                     </div>
                 </div>
+                <!-- Mobile search bar (hidden by default) -->
+                <div id="mobileSearchBar" class="hidden sm:hidden px-3 pb-3">
+                    <div class="relative">
+                        <input type="text" placeholder="Search..." class="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
+                    </div>
+                </div>
             </header>
 
             <!-- PAGE CONTENT -->
             <div class="flex-1 overflow-auto">
 
                 <!-- ========== DASHBOARD PAGE ========== -->
-                <div id="page-dashboard" class="page-content p-6 space-y-6">
-                    <div class="flex items-center justify-between">
+                <div id="page-dashboard" class="page-content p-4 sm:p-6 space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
-                            <h2 class="text-2xl font-bold text-slate-900">Load Assignment Dashboard</h2>
-                            <p class="text-slate-600 mt-1">Automatically assign teachers to subjects based on expertise and availability</p>
+                            <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Load Assignment Dashboard</h2>
+                            <p class="text-slate-600 mt-1 text-sm">Automatically assign teachers to subjects based on expertise and availability</p>
                         </div>
                         <div class="flex items-center gap-3">
-                            <span class="text-sm text-slate-500">Last generated: <span class="font-medium text-slate-700">Today, 2:45 PM</span></span>
+                            <span class="text-sm text-slate-500 hidden sm:inline">Last generated: <span class="font-medium text-slate-700">Today, 2:45 PM</span></span>
                             <button onclick="openHistoryModal()" class="flex items-center gap-2 px-3 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm">
                                 <i class="fas fa-clock-rotate-left"></i>
                                 History
@@ -322,7 +342,7 @@ try {
                     </div>
 
                     <!-- QUICK STATS -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                         <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200">
                             <div class="flex items-center justify-between">
                                 <div class="bg-indigo-100 p-2.5 rounded-lg"><i class="fas fa-users text-indigo-600"></i></div>
@@ -368,12 +388,12 @@ try {
                     <!-- UPLOAD FILES -->
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
-                            <div class="flex items-center justify-between">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div>
                                     <h3 class="text-lg font-semibold text-slate-900">Step 1: Upload Input Files</h3>
                                     <p class="text-sm text-slate-500 mt-0.5">Upload Excel/CSV files containing teacher profiles, subject catalog, and schedules</p>
                                 </div>
-                                <button class="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
+                                <button class="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1 self-start">
                                     <i class="fas fa-download text-xs"></i>
                                     Download Templates
                                 </button>
@@ -477,28 +497,28 @@ try {
 
                     <!-- GENERATE SCHEDULE -->
                     <div class="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl shadow-lg overflow-hidden">
-                        <div class="p-6 flex items-center justify-between">
+                        <div class="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div class="flex items-center gap-4">
-                                <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
-                                    <i class="fas fa-wand-magic-sparkles text-white text-2xl"></i>
+                                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-wand-magic-sparkles text-white text-xl sm:text-2xl"></i>
                                 </div>
                                 <div class="text-white">
-                                    <h3 class="text-xl font-semibold">Step 2: Generate Smart Schedule</h3>
+                                    <h3 class="text-lg sm:text-xl font-semibold">Step 2: Generate Smart Schedule</h3>
                                     <p class="text-indigo-100 text-sm mt-0.5">AI-powered matching: Expertise first, then availability</p>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-4 w-full sm:w-auto">
                                 <div class="hidden items-center gap-3 text-white" id="generatingIndicator">
                                     <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                                     <span class="text-sm">Generating schedule...</span>
                                 </div>
-                                <button id="generateBtn" onclick="generateSchedule()" class="px-6 py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 transition-all transform hover:scale-105 shadow-lg flex items-center gap-2">
+                                <button id="generateBtn" onclick="generateSchedule()" class="w-full sm:w-auto px-6 py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2">
                                     <i class="fas fa-bolt"></i>
                                     Generate Schedule
                                 </button>
                             </div>
                         </div>
-                        <div class="px-6 py-3 bg-indigo-700/50 flex items-center gap-6 text-sm text-indigo-100">
+                        <div class="px-4 sm:px-6 py-3 bg-indigo-700/50 flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-indigo-100">
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-scale-balanced"></i>
                                 <span>Priority: <strong class="text-white">Expertise (70%) → Availability (30%)</strong></span>
@@ -516,9 +536,9 @@ try {
 
                     <!-- LOAD ASSIGNMENT REPORT TABLE -->
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="px-6 py-4 border-b border-slate-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-4">
+                        <div class="px-4 sm:px-6 py-4 border-b border-slate-200">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div class="flex flex-wrap items-center gap-3">
                                     <h3 class="text-lg font-semibold text-slate-900">Load Assignment Report</h3>
                                     <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium"><?php echo (int)$totalTeachers; ?> Teachers • <?php echo (int)$totalSubjects; ?> Subjects</span>
                                 </div>
@@ -552,7 +572,7 @@ try {
                             </div>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
+                            <table class="w-full text-sm min-w-[900px]">
                                 <thead>
                                     <tr class="bg-slate-50 border-b border-slate-200">
                                         <th class="px-6 py-3 text-left"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"></th>
@@ -797,7 +817,7 @@ try {
                             </table>
                         </div>
                         <!-- Pagination -->
-                        <div id="dashboardPaginationBar" class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <div id="dashboardPaginationBar" class="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                             <div class="flex items-center gap-4">
                                 <span id="dashboardShowing" class="text-sm text-slate-600">Showing <?php echo count($teacherAssignments) + count($unassignedSubjects); ?> entries</span>
                                 <select id="dashboardPageSize" class="text-sm border border-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
