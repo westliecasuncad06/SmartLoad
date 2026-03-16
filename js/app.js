@@ -70,10 +70,150 @@ function closeModal() {
 
 function openSettingsModal() {
     document.getElementById('settingsModal').classList.remove('hidden');
+    loadPolicySettings();
 }
 
 function closeSettingsModal() {
     document.getElementById('settingsModal').classList.add('hidden');
+}
+
+function initPolicySettingsForm() {
+    const expertiseSlider = document.getElementById('policyExpertiseWeight');
+    const availabilitySlider = document.getElementById('policyAvailabilityWeight');
+
+    if (!expertiseSlider || !availabilitySlider) return;
+
+    const syncLabels = () => {
+        const expertise = Number(expertiseSlider.value || 0);
+        const availability = Number(availabilitySlider.value || 0);
+
+        const eLabel = document.getElementById('policyExpertiseWeightLabel');
+        const aLabel = document.getElementById('policyAvailabilityWeightLabel');
+
+        if (eLabel) eLabel.textContent = expertise + '%';
+        if (aLabel) aLabel.textContent = availability + '%';
+    };
+
+    expertiseSlider.addEventListener('input', () => {
+        const expertise = Number(expertiseSlider.value || 0);
+        availabilitySlider.value = String(100 - expertise);
+        syncLabels();
+    });
+
+    availabilitySlider.addEventListener('input', () => {
+        const availability = Number(availabilitySlider.value || 0);
+        expertiseSlider.value = String(100 - availability);
+        syncLabels();
+    });
+
+    syncLabels();
+}
+
+function setPolicySettingsStatus(message, isError) {
+    const status = document.getElementById('policySettingsStatus');
+    if (!status) return;
+
+    if (!message) {
+        status.classList.add('hidden');
+        status.textContent = '';
+        status.classList.remove('text-green-600', 'text-red-600');
+        return;
+    }
+
+    status.classList.remove('hidden');
+    status.textContent = message;
+    status.classList.toggle('text-red-600', !!isError);
+    status.classList.toggle('text-green-600', !isError);
+}
+
+function applyPolicySettingsToForm(settings) {
+    const maxLoadInput = document.getElementById('policyMaxLoad');
+    const expertiseSlider = document.getElementById('policyExpertiseWeight');
+    const availabilitySlider = document.getElementById('policyAvailabilityWeight');
+    const detectOverlaps = document.getElementById('policyDetectScheduleOverlaps');
+    const flagOverload = document.getElementById('policyFlagOverloadTeachers');
+    const checkPrereq = document.getElementById('policyCheckPrerequisites');
+
+    if (maxLoadInput) maxLoadInput.value = String(Number(settings.max_teaching_load || 18));
+    if (expertiseSlider) expertiseSlider.value = String(Number(settings.expertise_weight || 70));
+    if (availabilitySlider) availabilitySlider.value = String(Number(settings.availability_weight || 30));
+    if (detectOverlaps) detectOverlaps.checked = Number(settings.detect_schedule_overlaps || 0) === 1;
+    if (flagOverload) flagOverload.checked = Number(settings.flag_overload_teachers || 0) === 1;
+    if (checkPrereq) checkPrereq.checked = Number(settings.check_prerequisites || 0) === 1;
+
+    const eLabel = document.getElementById('policyExpertiseWeightLabel');
+    const aLabel = document.getElementById('policyAvailabilityWeightLabel');
+    if (eLabel && expertiseSlider) eLabel.textContent = expertiseSlider.value + '%';
+    if (aLabel && availabilitySlider) aLabel.textContent = availabilitySlider.value + '%';
+}
+
+async function loadPolicySettings() {
+    try {
+        setPolicySettingsStatus('Loading settings...', false);
+        const response = await fetch('api/policy_settings.php', { method: 'GET' });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || data.status !== 'success' || !data.settings) {
+            throw new Error((data && data.message) ? data.message : 'Failed to load policy settings.');
+        }
+
+        applyPolicySettingsToForm(data.settings);
+        setPolicySettingsStatus('', false);
+    } catch (err) {
+        setPolicySettingsStatus('Failed to load settings: ' + (err && err.message ? err.message : String(err)), true);
+    }
+}
+
+async function savePolicySettings() {
+    const maxLoadInput = document.getElementById('policyMaxLoad');
+    const expertiseSlider = document.getElementById('policyExpertiseWeight');
+    const availabilitySlider = document.getElementById('policyAvailabilityWeight');
+    const detectOverlaps = document.getElementById('policyDetectScheduleOverlaps');
+    const flagOverload = document.getElementById('policyFlagOverloadTeachers');
+    const checkPrereq = document.getElementById('policyCheckPrerequisites');
+
+    const maxLoad = Number(maxLoadInput ? maxLoadInput.value : 18);
+    const expertise = Number(expertiseSlider ? expertiseSlider.value : 70);
+    const availability = Number(availabilitySlider ? availabilitySlider.value : 30);
+
+    if (!Number.isFinite(maxLoad) || maxLoad < 1) {
+        setPolicySettingsStatus('Maximum teaching load must be at least 1.', true);
+        return;
+    }
+
+    if ((expertise + availability) !== 100) {
+        setPolicySettingsStatus('Expertise and availability weights must total 100%.', true);
+        return;
+    }
+
+    const payload = {
+        max_teaching_load: maxLoad,
+        expertise_weight: expertise,
+        availability_weight: availability,
+        detect_schedule_overlaps: detectOverlaps && detectOverlaps.checked ? 1 : 0,
+        flag_overload_teachers: flagOverload && flagOverload.checked ? 1 : 0,
+        check_prerequisites: checkPrereq && checkPrereq.checked ? 1 : 0,
+    };
+
+    try {
+        setPolicySettingsStatus('Saving settings...', false);
+        const data = await postJson('api/policy_settings.php', payload);
+        if (!data || data.status !== 'success') {
+            throw new Error((data && data.message) ? data.message : 'Failed to save policy settings.');
+        }
+
+        if (data.settings) {
+            applyPolicySettingsToForm(data.settings);
+        }
+
+        setPolicySettingsStatus('Settings saved successfully.', false);
+        setTimeout(() => {
+            setPolicySettingsStatus('', false);
+            closeSettingsModal();
+        }, 650);
+    } catch (err) {
+        setPolicySettingsStatus('Failed to save settings: ' + (err && err.message ? err.message : String(err)), true);
+    }
 }
 
 function openHistoryModal() {
@@ -153,12 +293,18 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize Subjects page actions/modals
     initSubjectsPage();
 
+    // Initialize Policy Settings controls
+    initPolicySettingsForm();
+
     // Initialize filter controls (Teachers & Subjects)
     initTeacherFilters();
     initSubjectFilters();
 
     // Initialize dashboard controls (filters/export/actions)
     initDashboardReport();
+
+    // Initialize pagination (Dashboard / Teachers / Subjects / Audit Trail)
+    initSmartPagination();
 });
 
 // --------------------------------------------------
@@ -186,8 +332,11 @@ function applyDashboardStatusFilter(tbody, status) {
     tbody.querySelectorAll('tr').forEach(tr => {
         const rowStatus = normalizeDashboardStatus(tr.dataset.status || '');
         const show = (wanted === 'all' || wanted === '' || rowStatus === wanted);
-        tr.style.display = show ? '' : 'none';
+        tr.dataset.filterHidden = show ? '0' : '1';
     });
+
+    // Let pagination decide what to show.
+    refreshSmartPagination('dashboard');
 }
 
 function downloadBlob(filename, blob) {
@@ -397,6 +546,228 @@ function initDashboardReport() {
         } catch (err) {
             alert('Failed to load details: ' + (err && err.message ? err.message : String(err)));
         }
+    });
+}
+
+// --------------------------------------------------
+// Pagination (Dashboard / Teachers / Subjects / Audit)
+// --------------------------------------------------
+const __smartPaginators = {};
+
+function refreshSmartPagination(key) {
+    const p = __smartPaginators[key];
+    if (p && typeof p.refresh === 'function') {
+        p.refresh();
+    }
+}
+
+function parsePageSizeFromSelect(selectEl, fallback) {
+    if (!selectEl) return fallback;
+    const opt = selectEl.options && selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null;
+    const text = (opt && opt.textContent) ? opt.textContent : String(selectEl.value || '');
+    const m = text.match(/\d+/);
+    const n = m ? Number(m[0]) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function buildPaginationModel(currentPage, totalPages) {
+    const page = Math.max(1, Math.min(totalPages, currentPage));
+    const pages = [];
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+        return { page, pages };
+    }
+
+    const windowSize = 1; // show current +/- 1
+    const left = Math.max(2, page - windowSize);
+    const right = Math.min(totalPages - 1, page + windowSize);
+
+    pages.push(1);
+    if (left > 2) pages.push(null);
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < totalPages - 1) pages.push(null);
+    pages.push(totalPages);
+
+    return { page, pages };
+}
+
+function renderPaginationControls(paginationEl, currentPage, totalPages, onPageChange) {
+    if (!paginationEl) return;
+    paginationEl.innerHTML = '';
+
+    const makeBtn = ({ label, html, disabled, active, onClick }) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.disabled = !!disabled;
+        if (active) {
+            btn.className = 'px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg';
+        } else {
+            btn.className = 'px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50';
+        }
+        if (label) btn.setAttribute('aria-label', label);
+        if (html) btn.innerHTML = html;
+        if (onClick) btn.addEventListener('click', onClick);
+        return btn;
+    };
+
+    // Prev
+    paginationEl.appendChild(makeBtn({
+        label: 'Previous page',
+        html: '<i class="fas fa-chevron-left text-xs"></i>',
+        disabled: currentPage <= 1,
+        active: false,
+        onClick: () => onPageChange(currentPage - 1),
+    }));
+
+    const model = buildPaginationModel(currentPage, totalPages);
+    model.pages.forEach(p => {
+        if (p === null) {
+            const span = document.createElement('span');
+            span.className = 'px-2 text-slate-400';
+            span.textContent = '...';
+            paginationEl.appendChild(span);
+            return;
+        }
+        paginationEl.appendChild(makeBtn({
+            label: 'Page ' + p,
+            html: String(p),
+            disabled: false,
+            active: p === model.page,
+            onClick: () => onPageChange(p),
+        }));
+    });
+
+    // Next
+    paginationEl.appendChild(makeBtn({
+        label: 'Next page',
+        html: '<i class="fas fa-chevron-right text-xs"></i>',
+        disabled: currentPage >= totalPages,
+        active: false,
+        onClick: () => onPageChange(currentPage + 1),
+    }));
+}
+
+function setupListPaginator(key, options) {
+    const {
+        containerEl,
+        itemSelector,
+        paginationEl,
+        showingEl,
+        pageSizeEl,
+        defaultPageSize,
+        label,
+        isItemFilteredOut,
+    } = options;
+
+    if (!containerEl || !paginationEl) return;
+
+    const state = {
+        page: 1,
+        pageSize: defaultPageSize,
+    };
+
+    const getItems = () => Array.from(containerEl.querySelectorAll(itemSelector));
+    const isFilteredOut = (el) => (isItemFilteredOut ? !!isItemFilteredOut(el) : false);
+
+    const refresh = () => {
+        if (pageSizeEl) {
+            state.pageSize = parsePageSizeFromSelect(pageSizeEl, state.pageSize);
+        }
+
+        const items = getItems();
+        const eligible = items.filter(el => !isFilteredOut(el));
+        const total = eligible.length;
+        const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
+        state.page = Math.max(1, Math.min(state.page, totalPages));
+
+        const startIdx = (state.page - 1) * state.pageSize;
+        const endIdx = startIdx + state.pageSize;
+
+        // Hide all filtered-out items.
+        items.forEach(el => {
+            if (isFilteredOut(el)) el.style.display = 'none';
+        });
+
+        // Page eligible items.
+        eligible.forEach((el, idx) => {
+            const show = idx >= startIdx && idx < endIdx;
+            el.style.display = show ? '' : 'none';
+        });
+
+        if (showingEl) {
+            if (total === 0) {
+                showingEl.textContent = 'Showing 0 ' + label;
+            } else {
+                const from = startIdx + 1;
+                const to = Math.min(endIdx, total);
+                showingEl.textContent = `Showing ${from}-${to} of ${total} ${label}`;
+            }
+        }
+
+        renderPaginationControls(paginationEl, state.page, totalPages, (nextPage) => {
+            state.page = nextPage;
+            refresh();
+        });
+    };
+
+    if (pageSizeEl) {
+        pageSizeEl.addEventListener('change', () => {
+            state.page = 1;
+            refresh();
+        });
+    }
+
+    __smartPaginators[key] = { refresh };
+    refresh();
+}
+
+function initSmartPagination() {
+    // Dashboard table pagination (works with status filter via data-filter-hidden)
+    setupListPaginator('dashboard', {
+        containerEl: document.getElementById('dashboardReportTbody'),
+        itemSelector: 'tr',
+        paginationEl: document.getElementById('dashboardPagination'),
+        showingEl: document.getElementById('dashboardShowing'),
+        pageSizeEl: document.getElementById('dashboardPageSize'),
+        defaultPageSize: 10,
+        label: 'entries',
+        isItemFilteredOut: (tr) => String(tr.dataset.filterHidden || '0') === '1',
+    });
+
+    // Teachers table pagination
+    setupListPaginator('teachers', {
+        containerEl: document.getElementById('teacherTableBody'),
+        itemSelector: 'tr',
+        paginationEl: document.getElementById('teacherPagination'),
+        showingEl: document.getElementById('teacherShowing'),
+        pageSizeEl: null,
+        defaultPageSize: 10,
+        label: 'teachers',
+        isItemFilteredOut: null,
+    });
+
+    // Subjects table pagination
+    setupListPaginator('subjects', {
+        containerEl: document.getElementById('subjectTableBody'),
+        itemSelector: 'tr',
+        paginationEl: document.getElementById('subjectPagination'),
+        showingEl: document.getElementById('subjectShowing'),
+        pageSizeEl: null,
+        defaultPageSize: 10,
+        label: 'subjects',
+        isItemFilteredOut: null,
+    });
+
+    // Audit trail pagination (list items)
+    setupListPaginator('audit', {
+        containerEl: document.getElementById('auditLogList'),
+        itemSelector: '.audit-log-item',
+        paginationEl: document.getElementById('auditPagination'),
+        showingEl: document.getElementById('auditShowing'),
+        pageSizeEl: null,
+        defaultPageSize: 10,
+        label: 'entries',
+        isItemFilteredOut: null,
     });
 }
 
@@ -613,6 +984,7 @@ function initTeacherFilters() {
             const teachers = Array.isArray(data.teachers) ? data.teachers : [];
             tbody.innerHTML = teachers.map(buildTeacherRowHtml).join('');
             wireTeacherRowButtons(tbody);
+            refreshSmartPagination('teachers');
         } catch (err) {
             if (err && err.name === 'AbortError') return;
             console.error(err);
@@ -633,6 +1005,9 @@ function buildSubjectRowHtml(s) {
     const units = Number(s.units || 0);
     const prerequisites = String(s.prerequisites || '');
 
+    const isAssigned = String(s.is_assigned || '0') === '1';
+    const assignedTo = String(s.assigned_teacher_name || '').trim();
+
     const prereqLabel = (prerequisites || '').trim() ? prerequisites : 'None';
 
     return `
@@ -643,8 +1018,11 @@ function buildSubjectRowHtml(s) {
   <td class="px-6 py-4 text-slate-600">${escapeHtml(program)}</td>
   <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium">${escapeHtml(units)}</span></td>
   <td class="px-6 py-4 text-slate-500 text-xs">${escapeHtml(prereqLabel)}</td>
-  <td class="px-6 py-4 text-slate-400 italic">—</td>
-  <td class="px-6 py-4"><span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Unassigned</span></td>
+    <td class="px-6 py-4 ${isAssigned ? 'text-slate-700' : 'text-slate-400 italic'}">${isAssigned ? escapeHtml(assignedTo || '—') : '—'}</td>
+    <td class="px-6 py-4">${isAssigned
+                ? '<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Assigned</span>'
+                : '<span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Unassigned</span>'}
+    </td>
   <td class="px-6 py-4">
     <div class="flex items-center justify-center gap-2">
       <button
@@ -750,18 +1128,21 @@ function initSubjectFilters() {
     const tbody = document.getElementById('subjectTableBody');
     const searchEl = document.getElementById('subjectSearch');
     const programEl = document.getElementById('subjectProgramFilter');
+    const statusEl = document.getElementById('subjectStatusFilter');
 
-    if (!page || !tbody || (!searchEl && !programEl)) return;
+    if (!page || !tbody || (!searchEl && !programEl && !statusEl)) return;
 
     let abortController = null;
 
     const run = async () => {
         const search = (searchEl ? searchEl.value : '').trim();
         const program = programEl ? String(programEl.value || 'All') : 'All';
+        const status = statusEl ? String(statusEl.value || 'all') : 'all';
 
         const qs = new URLSearchParams();
         qs.set('search', search);
         qs.set('program', program);
+        qs.set('status', status);
 
         if (abortController) abortController.abort();
         abortController = new AbortController();
@@ -776,6 +1157,7 @@ function initSubjectFilters() {
             const subjects = Array.isArray(data.subjects) ? data.subjects : [];
             tbody.innerHTML = subjects.map(buildSubjectRowHtml).join('');
             wireSubjectRowButtons(tbody);
+            refreshSmartPagination('subjects');
         } catch (err) {
             if (err && err.name === 'AbortError') return;
             console.error(err);
@@ -785,6 +1167,7 @@ function initSubjectFilters() {
     const runDebounced = debounce(run, 200);
     if (searchEl) searchEl.addEventListener('keyup', runDebounced);
     if (programEl) programEl.addEventListener('change', run);
+    if (statusEl) statusEl.addEventListener('change', run);
 }
 
 // --------------------------------------------------
@@ -1562,11 +1945,21 @@ async function generateSchedule() {
             return;
         }
 
-        alert(
-            'Schedule generated successfully!\n\n' +
-            '• ' + data.assigned_count + ' subjects assigned\n' +
-            '• ' + data.unassigned_count + ' subjects unassigned'
-        );
+        if (data.status === 'success') {
+            if (data.ai_enabled === true) {
+                alert(
+                    '✨ Schedule Generated Successfully!\n\n' +
+                    `• Assigned: ${data.assigned_count}\n` +
+                    `• Unassigned: ${data.unassigned_count}\n` +
+                    `• Gemini AI Evaluations: ${data.ai_calls} calls made.`
+                );
+            } else {
+                alert(
+                    '⚠️ Schedule Generated via Fallback Logic.\n' +
+                    '(Gemini API Key missing or invalid. AI was NOT used).'
+                );
+            }
+        }
 
         // Reload to reflect new data in the tables
         location.reload();

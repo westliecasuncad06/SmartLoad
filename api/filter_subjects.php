@@ -20,6 +20,15 @@ function is_all_filter(string $value): bool
     return false;
 }
 
+function normalize_status_filter(string $value): string
+{
+    $v = strtolower(trim($value));
+    if ($v === '' || $v === 'all' || $v === 'all status') return 'all';
+    if ($v === 'assigned') return 'assigned';
+    if ($v === 'unassigned') return 'unassigned';
+    return 'all';
+}
+
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
         json_response(405, ['status' => 'error', 'message' => 'Method not allowed.']);
@@ -27,6 +36,8 @@ try {
 
     $search = isset($_GET['search']) ? trim((string)$_GET['search']) : '';
     $program = isset($_GET['program']) ? trim((string)$_GET['program']) : 'All';
+    $status = isset($_GET['status']) ? trim((string)$_GET['status']) : 'all';
+    $status = normalize_status_filter($status);
 
     // Be defensive: some installations may not have the is_archived column yet.
     $hasArchive = false;
@@ -37,37 +48,62 @@ try {
         $hasArchive = false;
     }
 
-    $sql = 'SELECT id, course_code, name, program, units, prerequisites FROM subjects';
+    $sql = 'SELECT sub.id, sub.course_code, sub.name, sub.program, sub.units, sub.prerequisites,
+                   a.id AS assignment_id, t.name AS assigned_teacher_name
+            FROM subjects sub
+            LEFT JOIN (
+                SELECT subject_id, MAX(id) AS latest_assignment_id
+                FROM assignments
+                GROUP BY subject_id
+            ) la ON la.subject_id = sub.id
+            LEFT JOIN assignments a ON a.id = la.latest_assignment_id
+            LEFT JOIN teachers t ON t.id = a.teacher_id';
     $params = [];
     $where = [];
 
     if ($hasArchive) {
-        $where[] = 'is_archived = 0';
+        $where[] = 'sub.is_archived = 0';
     }
 
     if ($search !== '') {
         $like = '%' . $search . '%';
-        $where[] = '(course_code LIKE ? OR name LIKE ? OR prerequisites LIKE ?)';
+        $where[] = '(sub.course_code LIKE ? OR sub.name LIKE ? OR sub.prerequisites LIKE ? OR sub.program LIKE ? OR t.name LIKE ?)';
+        $params[] = $like;
+        $params[] = $like;
         $params[] = $like;
         $params[] = $like;
         $params[] = $like;
     }
 
     if (!is_all_filter($program)) {
-        $where[] = 'program = ?';
+        $where[] = 'sub.program = ?';
         $params[] = $program;
+    }
+
+    if ($status === 'assigned') {
+        $where[] = 'a.id IS NOT NULL';
+    } elseif ($status === 'unassigned') {
+        $where[] = 'a.id IS NULL';
     }
 
     if (!empty($where)) {
         $sql .= ' WHERE ' . implode(' AND ', $where);
     }
 
-    $sql .= ' ORDER BY course_code ASC';
+    $sql .= ' ORDER BY sub.course_code ASC';
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
 
     $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Normalize fields for JS rendering.
+    foreach ($subjects as &$s) {
+        $s['is_assigned'] = !empty($s['assignment_id']) ? 1 : 0;
+        $s['assigned_teacher_name'] = $s['assigned_teacher_name'] ?? null;
+        unset($s['assignment_id']);
+    }
+    unset($s);
 
     json_response(200, ['status' => 'success', 'subjects' => $subjects]);
 

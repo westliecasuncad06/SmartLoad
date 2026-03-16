@@ -52,7 +52,7 @@
                 <span class="text-sm text-slate-500">Showing <?php echo $auditCount; ?> entries</span>
             </div>
         </div>
-        <div class="divide-y divide-slate-100">
+        <div id="auditLogList" class="divide-y divide-slate-100">
             <?php if ($auditCount === 0): ?>
             <div class="px-6 py-8 text-center text-slate-400">
                 <i class="fas fa-clipboard-list text-3xl mb-2"></i>
@@ -101,7 +101,7 @@
                 }
                 $formattedDate = date('M j, Y, g:i A', strtotime($log['created_at']));
             ?>
-            <div class="px-6 py-4 flex items-start gap-4 hover:bg-slate-50 transition-colors">
+            <div class="audit-log-item px-6 py-4 flex items-start gap-4 hover:bg-slate-50 transition-colors">
                 <div class="w-10 h-10 <?php echo $iconBg; ?> rounded-full flex items-center justify-center flex-shrink-0"><i class="<?php echo $iconClass; ?>"></i></div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
@@ -119,9 +119,9 @@
             <?php endforeach; ?>
         </div>
         <!-- Pagination -->
-        <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span class="text-sm text-slate-600">Showing <?php echo $auditCount; ?> entries</span>
-            <div class="flex items-center gap-1">
+        <div id="auditPaginationBar" class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <span id="auditShowing" class="text-sm text-slate-600">Showing <?php echo $auditCount; ?> entries</span>
+            <div id="auditPagination" class="flex items-center gap-1">
                 <button class="px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50" disabled><i class="fas fa-chevron-left text-xs"></i></button>
                 <button class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg">1</button>
                 <button class="px-3 py-1 text-sm border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"><i class="fas fa-chevron-right text-xs"></i></button>
