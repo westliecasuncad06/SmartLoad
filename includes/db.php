@@ -8,8 +8,9 @@ $dbname = 'smartload';
 $username = 'root';
 $password = '';
 
-// Gemini AI API Key (replace with your actual key)
-define('GEMINI_API_KEY', 'YOUR_GEMINI_API_KEY_HERE');
+// Gemini AI API Key
+// NOTE: If you prefer not to hardcode secrets, you can set an environment variable named GEMINI_API_KEY.
+define('GEMINI_API_KEY', getenv('GEMINI_API_KEY') ?: 'AIzaSyAc2guweyZowjbn289MNKWc3VP8VbVvp2A');
 
 try {
     $pdo = new PDO(

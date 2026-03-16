@@ -11,6 +11,85 @@ function json_response(int $statusCode, array $payload): void {
 }
 
 /**
+ * Parse a teacher availability string.
+ *
+ * Format example: "Mon 08:00-17:00;Tue 09:00-15:00"
+ *
+ * @return array<int, array{day_of_week:string,start_time:string,end_time:string}>
+ */
+function parse_teacher_availability(?string $availability): array {
+    $availability = trim((string)$availability);
+    if ($availability === '') {
+        return [];
+    }
+
+    // Match DB enum values (Monday..Sunday) but accept Mon/Tue/etc in CSV.
+    $dayMap = [
+        'mon' => 'Monday',
+        'tue' => 'Tuesday',
+        'wed' => 'Wednesday',
+        'thu' => 'Thursday',
+        'fri' => 'Friday',
+        'sat' => 'Saturday',
+        'sun' => 'Sunday',
+    ];
+
+    $entries = [];
+    $parts = preg_split('/\s*;\s*/', $availability) ?: [];
+    foreach ($parts as $part) {
+        $part = trim((string)$part);
+        if ($part === '') {
+            continue;
+        }
+
+        if (!preg_match('/^([A-Za-z]{3,9})\s+(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/', $part, $m)) {
+            continue;
+        }
+
+        $dayRaw = strtolower($m[1]);
+        $dayKey = substr($dayRaw, 0, 3);
+        if (!isset($dayMap[$dayKey])) {
+            continue;
+        }
+        $day = $dayMap[$dayKey];
+
+        $start = $m[2];
+        $end   = $m[3];
+
+        // Normalize to HH:MM
+        if (preg_match('/^(\d):(\d{2})$/', $start, $hm)) {
+            $start = '0' . $hm[1] . ':' . $hm[2];
+        }
+        if (preg_match('/^(\d):(\d{2})$/', $end, $hm2)) {
+            $end = '0' . $hm2[1] . ':' . $hm2[2];
+        }
+
+        $startDt = DateTime::createFromFormat('H:i', $start);
+        $endDt   = DateTime::createFromFormat('H:i', $end);
+        if (!$startDt || !$endDt) {
+            continue;
+        }
+        if ($startDt->format('H:i') !== $start || $endDt->format('H:i') !== $end) {
+            continue;
+        }
+
+        $startMinutes = ((int)$startDt->format('H')) * 60 + (int)$startDt->format('i');
+        $endMinutes   = ((int)$endDt->format('H')) * 60 + (int)$endDt->format('i');
+        if ($endMinutes <= $startMinutes) {
+            continue;
+        }
+
+        $entries[] = [
+            'day_of_week' => $day,
+            'start_time'  => $start,
+            'end_time'    => $end,
+        ];
+    }
+
+    return $entries;
+}
+
+/**
  * @return array<int, array<int, string|null>>
  */
 function read_csv_rows($handle): array {
@@ -78,7 +157,7 @@ try {
 
     switch ($type) {
         case 'teacher': {
-            // Expected CSV columns: name, email, type, max_units, expertise_tags
+            // Expected CSV columns: name, email, type, max_units, expertise_tags, availability (optional)
             $incoming = [];
             $emails   = [];
             foreach ($csvRows as $row) {
@@ -91,6 +170,9 @@ try {
                     'type'           => trim((string)$row[2]),
                     'max_units'      => (int)$row[3],
                     'expertise_tags' => isset($row[4]) ? trim((string)$row[4]) : null,
+                    // Only treat availability as present if the column exists in the CSV row.
+                    'availability_present' => array_key_exists(5, $row),
+                    'availability'   => isset($row[5]) ? trim((string)$row[5]) : null,
                 ];
                 if ($record['email'] === '') {
                     continue;
@@ -111,9 +193,11 @@ try {
             }
 
             if ($conflictAction === 'update') {
+                $stmtDeleteAvailability = $pdo->prepare('DELETE FROM teacher_availability WHERE teacher_id = ?');
+                $stmtInsertAvailability = $pdo->prepare('INSERT INTO teacher_availability (teacher_id, day_of_week, start_time, end_time) VALUES (?, ?, ?, ?)');
                 $stmtUpsert = $pdo->prepare(
                     'INSERT INTO teachers (name, email, type, max_units, expertise_tags) VALUES (?, ?, ?, ?, ?) '
-                    . 'ON DUPLICATE KEY UPDATE name=VALUES(name), type=VALUES(type), max_units=VALUES(max_units), expertise_tags=VALUES(expertise_tags)'
+                    . 'ON DUPLICATE KEY UPDATE name=VALUES(name), type=VALUES(type), max_units=VALUES(max_units), expertise_tags=VALUES(expertise_tags), id=LAST_INSERT_ID(id)'
                 );
                 foreach ($incoming as $rec) {
                     $isDuplicate = isset($existingByEmail[$rec['email']]);
@@ -124,6 +208,23 @@ try {
                         (int)$rec['max_units'],
                         $rec['expertise_tags'],
                     ]);
+
+                    $teacherId = (int)$pdo->lastInsertId();
+
+                    // If availability column is present in the CSV, replace availability rows.
+                    if (!empty($teacherId) && !empty($rec['availability_present'])) {
+                        $stmtDeleteAvailability->execute([$teacherId]);
+                        $entries = parse_teacher_availability($rec['availability']);
+                        foreach ($entries as $entry) {
+                            $stmtInsertAvailability->execute([
+                                $teacherId,
+                                $entry['day_of_week'],
+                                $entry['start_time'],
+                                $entry['end_time'],
+                            ]);
+                        }
+                    }
+
                     if ($isDuplicate) {
                         $rowsUpdated++;
                     } else {
@@ -133,6 +234,7 @@ try {
                 break;
             }
 
+            $stmtInsertAvailability = $pdo->prepare('INSERT INTO teacher_availability (teacher_id, day_of_week, start_time, end_time) VALUES (?, ?, ?, ?)');
             $stmtInsert = $pdo->prepare('INSERT INTO teachers (name, email, type, max_units, expertise_tags) VALUES (?, ?, ?, ?, ?)');
             foreach ($incoming as $rec) {
                 if (isset($existingByEmail[$rec['email']])) {
@@ -140,7 +242,14 @@ try {
                         'key'      => 'email',
                         'value'    => $rec['email'],
                         'existing' => $existingByEmail[$rec['email']],
-                        'incoming' => $rec,
+                        // Keep conflict payload backward-compatible (exclude availability fields).
+                        'incoming' => [
+                            'name'           => $rec['name'],
+                            'email'          => $rec['email'],
+                            'type'           => $rec['type'],
+                            'max_units'      => (int)$rec['max_units'],
+                            'expertise_tags' => $rec['expertise_tags'],
+                        ],
                     ];
                     continue;
                 }
@@ -152,6 +261,20 @@ try {
                         (int)$rec['max_units'],
                         $rec['expertise_tags'],
                     ]);
+
+                    $teacherId = (int)$pdo->lastInsertId();
+                    if (!empty($teacherId) && !empty($rec['availability_present'])) {
+                        $entries = parse_teacher_availability($rec['availability']);
+                        foreach ($entries as $entry) {
+                            $stmtInsertAvailability->execute([
+                                $teacherId,
+                                $entry['day_of_week'],
+                                $entry['start_time'],
+                                $entry['end_time'],
+                            ]);
+                        }
+                    }
+
                     $insertedCount++;
                 } catch (PDOException $e) {
                     $sqlState = (string)$e->getCode();
@@ -259,21 +382,36 @@ try {
 
         case 'schedule': {
             // Expected CSV columns: subject_id, day_of_week, start_time, end_time, room
-            $stmt = $pdo->prepare(
-                'INSERT INTO schedules (subject_id, day_of_week, start_time, end_time, room) VALUES (?, ?, ?, ?, ?)'
-            );
+            // Optional (if DB column exists): section
+
+            $scheduleHasSection = false;
+            try {
+                $col = $pdo->query("SHOW COLUMNS FROM schedules LIKE 'section'")->fetch(PDO::FETCH_ASSOC);
+                $scheduleHasSection = is_array($col) && !empty($col);
+            } catch (Exception $ignore) {
+                $scheduleHasSection = false;
+            }
+
+            $stmt = $scheduleHasSection
+                ? $pdo->prepare('INSERT INTO schedules (subject_id, day_of_week, start_time, end_time, room, section) VALUES (?, ?, ?, ?, ?, ?)')
+                : $pdo->prepare('INSERT INTO schedules (subject_id, day_of_week, start_time, end_time, room) VALUES (?, ?, ?, ?, ?)');
+
             foreach ($csvRows as $row) {
                 if (count($row) < 5) {
                     continue;
                 }
                 try {
-                    $stmt->execute([
+                    $params = [
                         (int)$row[0],
                         trim((string)$row[1]),
                         trim((string)$row[2]),
                         trim((string)$row[3]),
                         trim((string)$row[4]),
-                    ]);
+                    ];
+                    if ($scheduleHasSection) {
+                        $params[] = isset($row[5]) ? trim((string)$row[5]) : null;
+                    }
+                    $stmt->execute($params);
                     $insertedCount++;
                 } catch (PDOException $e) {
                     $sqlState = (string)$e->getCode();
