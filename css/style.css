@@ -1,0 +1,30 @@
+/* ===================================================
+   SmartLoad - Faculty Scheduling System
+   Custom Styles (Tailwind handles most styling via CDN)
+   =================================================== */
+
+/* Base Font */
+* {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Upload Zone States */
+.upload-zone.drag-over {
+    border-color: #6366f1;
+    background-color: #eef2ff;
+}
+
+.upload-zone.uploaded {
+    border-color: #22c55e;
+    background-color: #f0fdf4;
+}
+
+/* Schedule Generation Animation */
+@keyframes pulse-border {
+    0%, 100% { border-color: #6366f1; }
+    50% { border-color: #818cf8; }
+}
+
+.generating {
+    animation: pulse-border 1.5s ease-in-out infinite;
+}
