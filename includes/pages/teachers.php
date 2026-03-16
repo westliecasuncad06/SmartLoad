@@ -38,14 +38,19 @@
                 <h3 class="text-lg font-semibold text-slate-900">All Teachers</h3>
                 <div class="flex items-center gap-3">
                     <div class="relative">
-                        <input type="text" placeholder="Search teachers..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64">
+                        <input id="teacherSearch" type="text" placeholder="Search teachers..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64">
                         <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
                     </div>
-                    <select class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <select id="teacherDepartmentFilter" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option>All Departments</option>
                         <option>Computer Science</option>
                         <option>Mathematics</option>
                         <option>Engineering</option>
+                    </select>
+                    <select id="teacherTypeFilter" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="All">All</option>
+                        <option value="Full-time">Full-time</option>
+                        <option value="Part-time">Part-time</option>
                     </select>
                 </div>
             </div>
@@ -62,7 +67,7 @@
                         <th class="px-6 py-3 text-center text-slate-600 font-semibold">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="teacherTableBody">
                     <?php
                     $teacherRows = $pdo->query('SELECT * FROM teachers WHERE is_archived = 0 ORDER BY name ASC');
                     foreach ($teacherRows as $teacher):

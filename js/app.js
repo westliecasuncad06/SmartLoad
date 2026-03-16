@@ -93,13 +93,8 @@ function closeUploadConflictModal() {
     if (modal) modal.classList.add('hidden');
 
     conflictModalState = { type: null, file: null, conflicts: [], rowsInserted: 0 };
-<<<<<<< Updated upstream
     reloadAfterConflictResolve = false;
-    const tbody = document.getElementById('conflictTableBody');
-=======
-
     const tbody = document.getElementById('uploadConflictTableBody');
->>>>>>> Stashed changes
     if (tbody) tbody.innerHTML = '';
 }
 
@@ -117,15 +112,21 @@ function closeConflictModal() {
 
 // Close modals when clicking outside
 document.addEventListener('DOMContentLoaded', function () {
-<<<<<<< HEAD
-    ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal', 'teacherImportModal', 'teacherAddModal', 'teacherViewModal', 'teacherEditModal', 'subjectImportModal', 'subjectAddModal', 'subjectViewModal', 'subjectEditModal'].forEach(modalId => {
-=======
-<<<<<<< Updated upstream
-    ['overrideModal', 'settingsModal', 'historyModal', 'conflictModal', 'teacherImportModal', 'teacherAddModal', 'teacherViewModal', 'teacherEditModal'].forEach(modalId => {
-=======
-    ['overrideModal', 'settingsModal', 'historyModal', 'uploadConflictModal', 'conflictModal'].forEach(modalId => {
->>>>>>> Stashed changes
->>>>>>> 31a54a6dd8d360494a0e46d58d57f2ddbd953048
+    [
+        'overrideModal',
+        'settingsModal',
+        'historyModal',
+        'uploadConflictModal',
+        'conflictModal',
+        'teacherImportModal',
+        'teacherAddModal',
+        'teacherViewModal',
+        'teacherEditModal',
+        'subjectImportModal',
+        'subjectAddModal',
+        'subjectViewModal',
+        'subjectEditModal',
+    ].forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.addEventListener('click', function (e) {
@@ -150,7 +151,398 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize Subjects page actions/modals
     initSubjectsPage();
+
+    // Initialize filter controls (Teachers & Subjects)
+    initTeacherFilters();
+    initSubjectFilters();
 });
+
+// --------------------------------------------------
+// Filters (Teachers & Subjects)
+// --------------------------------------------------
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function initialsFromName(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '—';
+    return parts.map(p => p.charAt(0).toUpperCase()).join('').slice(0, 3);
+}
+
+function debounce(fn, delayMs) {
+    let timer = null;
+    return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delayMs);
+    };
+}
+
+function buildTeacherRowHtml(t) {
+    const id = Number(t.id || 0);
+    const name = String(t.name || '');
+    const email = String(t.email || '');
+    const type = String(t.type || '');
+    const maxUnits = Number(t.max_units || 0);
+    const currentUnits = Number(t.current_units || 0);
+    const expertise = String(t.expertise_tags || '');
+
+    const isOverloaded = currentUnits > maxUnits;
+    const rowClass = 'border-b border-slate-100 hover:bg-slate-50 transition-colors' + (isOverloaded ? ' bg-red-50/30' : '');
+    const initials = initialsFromName(name);
+
+    const tagsHtml = expertise
+        ? expertise.split(',').map(s => s.trim()).filter(Boolean)
+            .map(tag => `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">${escapeHtml(tag)}</span>`)
+            .join('')
+        : '';
+
+    const employmentHtml = (type === 'Full-time')
+        ? '<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Full-time</span>'
+        : '<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Part-time</span>';
+
+    const overloadIcon = isOverloaded ? '<i class="fas fa-triangle-exclamation text-red-500 text-xs"></i>' : '';
+    const currentUnitsClass = isOverloaded ? 'text-red-600' : 'text-slate-900';
+
+    return `
+<tr class="${rowClass}">
+  <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600"></td>
+  <td class="px-6 py-4">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-medium text-sm">${escapeHtml(initials)}</div>
+      <div>
+        <p class="font-medium text-slate-900">${escapeHtml(name)}</p>
+        <p class="text-xs text-slate-500">${escapeHtml(email)}</p>
+      </div>
+    </div>
+  </td>
+  <td class="px-6 py-4">
+    <div class="flex flex-wrap gap-1">${tagsHtml}</div>
+  </td>
+  <td class="px-6 py-4">${employmentHtml}</td>
+  <td class="px-6 py-4">
+    <div class="flex items-center gap-2">
+      <span class="font-semibold ${currentUnitsClass}">${escapeHtml(currentUnits)}</span>
+      <span class="text-slate-400">/</span>
+      <span class="text-slate-500">${escapeHtml(maxUnits)} units</span>
+      ${overloadIcon}
+    </div>
+  </td>
+  <td class="px-6 py-4">
+    <div class="flex items-center justify-center gap-2">
+      <button
+        type="button"
+        class="teacher-action-view p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+        title="View"
+        data-teacher-id="${escapeHtml(id)}"
+        data-teacher-name="${escapeHtml(name)}"
+        data-teacher-email="${escapeHtml(email)}"
+        data-teacher-type="${escapeHtml(type)}"
+        data-teacher-max-units="${escapeHtml(maxUnits)}"
+        data-teacher-current-units="${escapeHtml(currentUnits)}"
+        data-teacher-expertise-tags="${escapeHtml(expertise)}"
+      ><i class="fas fa-eye text-sm"></i></button>
+      <button
+        type="button"
+        class="teacher-action-edit p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+        title="Edit"
+        data-teacher-id="${escapeHtml(id)}"
+        data-teacher-name="${escapeHtml(name)}"
+        data-teacher-email="${escapeHtml(email)}"
+        data-teacher-type="${escapeHtml(type)}"
+        data-teacher-max-units="${escapeHtml(maxUnits)}"
+        data-teacher-current-units="${escapeHtml(currentUnits)}"
+        data-teacher-expertise-tags="${escapeHtml(expertise)}"
+      ><i class="fas fa-pen text-sm"></i></button>
+      <button
+        type="button"
+        class="teacher-action-archive p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+        title="Archive"
+        data-teacher-id="${escapeHtml(id)}"
+        data-teacher-name="${escapeHtml(name)}"
+      ><i class="fas fa-box-archive text-sm"></i></button>
+    </div>
+  </td>
+</tr>`;
+}
+
+function wireTeacherRowButtons(container) {
+    if (!container) return;
+
+    container.querySelectorAll('.teacher-action-view').forEach(btn => {
+        if (btn.dataset.wired === '1') return;
+        btn.dataset.wired = '1';
+        btn.addEventListener('click', () => {
+            const t = getTeacherFromDataset(btn);
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            set('viewTeacherName', t.name || '—');
+            set('viewTeacherEmail', t.email || '—');
+            set('viewTeacherType', t.type || '—');
+            set('viewTeacherMaxUnits', String(t.max_units));
+            set('viewTeacherCurrentUnits', String(t.current_units));
+            set('viewTeacherExpertise', (t.expertise_tags || '').trim() || '—');
+            openTeacherModal('teacherViewModal');
+        });
+    });
+
+    container.querySelectorAll('.teacher-action-edit').forEach(btn => {
+        if (btn.dataset.wired === '1') return;
+        btn.dataset.wired = '1';
+        btn.addEventListener('click', () => {
+            const t = getTeacherFromDataset(btn);
+            const idEl = document.getElementById('editTeacherId');
+            const nameEl = document.getElementById('editTeacherName');
+            const emailEl = document.getElementById('editTeacherEmail');
+            const typeEl = document.getElementById('editTeacherType');
+            const maxEl = document.getElementById('editTeacherMaxUnits');
+            const expEl = document.getElementById('editTeacherExpertise');
+            if (idEl) idEl.value = String(t.id);
+            if (nameEl) nameEl.value = t.name || '';
+            if (emailEl) emailEl.value = t.email || '';
+            if (typeEl) typeEl.value = t.type || 'Full-time';
+            if (maxEl) maxEl.value = String(t.max_units || 0);
+            if (expEl) expEl.value = t.expertise_tags || '';
+            openTeacherModal('teacherEditModal');
+        });
+    });
+
+    container.querySelectorAll('.teacher-action-archive').forEach(btn => {
+        if (btn.dataset.wired === '1') return;
+        btn.dataset.wired = '1';
+        btn.addEventListener('click', async () => {
+            const id = Number(btn.dataset.teacherId || 0);
+            const name = btn.dataset.teacherName || '';
+            if (!id) return;
+            if (!confirm('Archive this teacher?')) return;
+            try {
+                const data = await postJson('api/archive_teacher.php', { id });
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Failed to archive teacher.');
+                }
+                alert((name ? name + ' ' : '') + 'archived successfully.');
+                location.reload();
+            } catch (err) {
+                alert('Archive failed: ' + (err && err.message ? err.message : String(err)));
+            }
+        });
+    });
+}
+
+function initTeacherFilters() {
+    const page = document.getElementById('page-teachers');
+    const tbody = document.getElementById('teacherTableBody');
+    const searchEl = document.getElementById('teacherSearch');
+    const deptEl = document.getElementById('teacherDepartmentFilter');
+    const typeEl = document.getElementById('teacherTypeFilter');
+
+    if (!page || !tbody || (!searchEl && !deptEl && !typeEl)) return;
+
+    let abortController = null;
+
+    const run = async () => {
+        const search = (searchEl ? searchEl.value : '').trim();
+        const department = deptEl ? String(deptEl.value || 'All') : 'All';
+        const type = typeEl ? String(typeEl.value || 'All') : 'All';
+
+        const qs = new URLSearchParams();
+        qs.set('search', search);
+        qs.set('department', department);
+        qs.set('type', type);
+
+        if (abortController) abortController.abort();
+        abortController = new AbortController();
+
+        try {
+            const res = await fetch('api/filter_teachers.php?' + qs.toString(), { signal: abortController.signal });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data || data.status !== 'success') {
+                throw new Error((data && data.message) ? data.message : 'Failed to filter teachers.');
+            }
+
+            const teachers = Array.isArray(data.teachers) ? data.teachers : [];
+            tbody.innerHTML = teachers.map(buildTeacherRowHtml).join('');
+            wireTeacherRowButtons(tbody);
+        } catch (err) {
+            if (err && err.name === 'AbortError') return;
+            console.error(err);
+        }
+    };
+
+    const runDebounced = debounce(run, 200);
+    if (searchEl) searchEl.addEventListener('keyup', runDebounced);
+    if (deptEl) deptEl.addEventListener('change', run);
+    if (typeEl) typeEl.addEventListener('change', run);
+}
+
+function buildSubjectRowHtml(s) {
+    const id = Number(s.id || 0);
+    const courseCode = String(s.course_code || '');
+    const name = String(s.name || '');
+    const program = String(s.program || '');
+    const units = Number(s.units || 0);
+    const prerequisites = String(s.prerequisites || '');
+
+    const prereqLabel = (prerequisites || '').trim() ? prerequisites : 'None';
+
+    return `
+<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+  <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600"></td>
+  <td class="px-6 py-4 font-medium text-indigo-600">${escapeHtml(courseCode)}</td>
+  <td class="px-6 py-4 font-medium text-slate-900">${escapeHtml(name)}</td>
+  <td class="px-6 py-4 text-slate-600">${escapeHtml(program)}</td>
+  <td class="px-6 py-4"><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium">${escapeHtml(units)}</span></td>
+  <td class="px-6 py-4 text-slate-500 text-xs">${escapeHtml(prereqLabel)}</td>
+  <td class="px-6 py-4 text-slate-400 italic">—</td>
+  <td class="px-6 py-4"><span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Unassigned</span></td>
+  <td class="px-6 py-4">
+    <div class="flex items-center justify-center gap-2">
+      <button
+        type="button"
+        class="subject-action-view p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+        title="View"
+        data-subject-id="${escapeHtml(id)}"
+        data-subject-course-code="${escapeHtml(courseCode)}"
+        data-subject-name="${escapeHtml(name)}"
+        data-subject-program="${escapeHtml(program)}"
+        data-subject-units="${escapeHtml(units)}"
+        data-subject-prerequisites="${escapeHtml(prerequisites)}"
+      ><i class="fas fa-eye text-sm"></i></button>
+      <button
+        type="button"
+        class="subject-action-edit p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+        title="Edit"
+        data-subject-id="${escapeHtml(id)}"
+        data-subject-course-code="${escapeHtml(courseCode)}"
+        data-subject-name="${escapeHtml(name)}"
+        data-subject-program="${escapeHtml(program)}"
+        data-subject-units="${escapeHtml(units)}"
+        data-subject-prerequisites="${escapeHtml(prerequisites)}"
+      ><i class="fas fa-pen text-sm"></i></button>
+      <button
+        type="button"
+        class="subject-action-archive p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+        title="Archive"
+        data-subject-id="${escapeHtml(id)}"
+        data-subject-course-code="${escapeHtml(courseCode)}"
+      ><i class="fas fa-box-archive text-sm"></i></button>
+    </div>
+  </td>
+</tr>`;
+}
+
+function wireSubjectRowButtons(container) {
+    if (!container) return;
+
+    container.querySelectorAll('.subject-action-view').forEach(btn => {
+        if (btn.dataset.wired === '1') return;
+        btn.dataset.wired = '1';
+        btn.addEventListener('click', () => {
+            const s = getSubjectFromDataset(btn);
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            set('viewSubjectCourseCode', s.course_code || '—');
+            set('viewSubjectName', s.name || '—');
+            set('viewSubjectProgram', s.program || '—');
+            set('viewSubjectUnits', String(s.units));
+            set('viewSubjectPrerequisites', (s.prerequisites || '').trim() || 'None');
+            openSubjectModal('subjectViewModal');
+        });
+    });
+
+    container.querySelectorAll('.subject-action-edit').forEach(btn => {
+        if (btn.dataset.wired === '1') return;
+        btn.dataset.wired = '1';
+        btn.addEventListener('click', () => {
+            const s = getSubjectFromDataset(btn);
+            const idEl = document.getElementById('editSubjectId');
+            const codeEl = document.getElementById('editSubjectCourseCode');
+            const nameEl = document.getElementById('editSubjectName');
+            const programEl = document.getElementById('editSubjectProgram');
+            const unitsEl = document.getElementById('editSubjectUnits');
+            const prereqEl = document.getElementById('editSubjectPrerequisites');
+            if (idEl) idEl.value = String(s.id);
+            if (codeEl) codeEl.value = s.course_code || '';
+            if (nameEl) nameEl.value = s.name || '';
+            if (programEl) programEl.value = s.program || '';
+            if (unitsEl) unitsEl.value = String(s.units || 0);
+            if (prereqEl) prereqEl.value = s.prerequisites || '';
+            openSubjectModal('subjectEditModal');
+        });
+    });
+
+    container.querySelectorAll('.subject-action-archive').forEach(btn => {
+        if (btn.dataset.wired === '1') return;
+        btn.dataset.wired = '1';
+        btn.addEventListener('click', async () => {
+            const id = Number(btn.dataset.subjectId || 0);
+            const code = btn.dataset.subjectCourseCode || '';
+            if (!id) return;
+            if (!confirm('Archive this subject?')) return;
+            try {
+                const data = await postJson('api/archive_subject.php', { id });
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Failed to archive subject.');
+                }
+                alert((code ? code + ' ' : '') + 'archived successfully.');
+                location.reload();
+            } catch (err) {
+                alert('Archive failed: ' + (err && err.message ? err.message : String(err)));
+            }
+        });
+    });
+}
+
+function initSubjectFilters() {
+    const page = document.getElementById('page-subjects');
+    const tbody = document.getElementById('subjectTableBody');
+    const searchEl = document.getElementById('subjectSearch');
+    const programEl = document.getElementById('subjectProgramFilter');
+
+    if (!page || !tbody || (!searchEl && !programEl)) return;
+
+    let abortController = null;
+
+    const run = async () => {
+        const search = (searchEl ? searchEl.value : '').trim();
+        const program = programEl ? String(programEl.value || 'All') : 'All';
+
+        const qs = new URLSearchParams();
+        qs.set('search', search);
+        qs.set('program', program);
+
+        if (abortController) abortController.abort();
+        abortController = new AbortController();
+
+        try {
+            const res = await fetch('api/filter_subjects.php?' + qs.toString(), { signal: abortController.signal });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data || data.status !== 'success') {
+                throw new Error((data && data.message) ? data.message : 'Failed to filter subjects.');
+            }
+
+            const subjects = Array.isArray(data.subjects) ? data.subjects : [];
+            tbody.innerHTML = subjects.map(buildSubjectRowHtml).join('');
+            wireSubjectRowButtons(tbody);
+        } catch (err) {
+            if (err && err.name === 'AbortError') return;
+            console.error(err);
+        }
+    };
+
+    const runDebounced = debounce(run, 200);
+    if (searchEl) searchEl.addEventListener('keyup', runDebounced);
+    if (programEl) programEl.addEventListener('change', run);
+}
 
 // --------------------------------------------------
 // Subjects Page - Modals & Actions
@@ -852,15 +1244,11 @@ async function resolveConflictUpdate() {
 
     try {
         const data = await uploadFile(conflictModalState.file, conflictModalState.type, { conflict_action: 'update' });
-<<<<<<< Updated upstream
         const shouldReload = reloadAfterConflictResolve;
-        closeConflictModal();
+        closeUploadConflictModal();
         if (shouldReload) {
             location.reload();
         }
-=======
-        closeUploadConflictModal();
->>>>>>> Stashed changes
         // Success alert already shown by uploadFile
         return data;
     } catch (err) {
@@ -873,15 +1261,11 @@ async function resolveConflictUpdate() {
 
 function resolveConflictKeep() {
     // Keep existing records; we already inserted the non-duplicates.
-<<<<<<< Updated upstream
     const shouldReload = reloadAfterConflictResolve;
-    closeConflictModal();
+    closeUploadConflictModal();
     if (shouldReload) {
         location.reload();
     }
-=======
-    closeUploadConflictModal();
->>>>>>> Stashed changes
 }
 
 function removeFile(type) {

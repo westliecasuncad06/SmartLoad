@@ -42,10 +42,10 @@
                 <h3 class="text-lg font-semibold text-slate-900">All Subjects</h3>
                 <div class="flex items-center gap-3">
                     <div class="relative">
-                        <input type="text" placeholder="Search subjects..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64">
+                        <input id="subjectSearch" type="text" placeholder="Search subjects..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64">
                         <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
                     </div>
-                    <select class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <select id="subjectProgramFilter" class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option>All Programs</option>
                         <option>BS Computer Science</option>
                         <option>BS Information Technology</option>
@@ -69,7 +69,7 @@
                         <th class="px-6 py-3 text-center text-slate-600 font-semibold">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="subjectTableBody">
                     <?php
                     // Subjects archiving support: filter archived subjects when column exists.
                     $hasSubjectArchive = false;
