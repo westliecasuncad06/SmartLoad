@@ -2326,6 +2326,13 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// Initialize search when document is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSearch);
+} else {
+    initializeSearch();
+}
+
 // --------------------------------------------------
 // Load Report Modals (View / Close)
 // --------------------------------------------------
