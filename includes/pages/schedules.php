@@ -1,3 +1,41 @@
+<?php
+// Fetch schedule data
+$scheduleStmt = $pdo->query("
+    SELECT s.day_of_week, s.start_time, s.room, sub.course_code, sub.name, t.name as teacher_name
+    FROM schedules s
+    JOIN subjects sub ON s.subject_id = sub.id
+    LEFT JOIN assignments a ON sub.id = a.subject_id
+    LEFT JOIN teachers t ON a.teacher_id = t.id
+");
+$scheduleRows = $scheduleStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Group by day and time
+$grid = [];
+foreach ($scheduleRows as $row) {
+    $timeKey = date('g:i A', strtotime($row['start_time']));
+    $grid[$row['day_of_week']][$timeKey][] = $row;
+}
+
+// Color palette for class cards
+$cardColors = ['indigo', 'pink', 'emerald', 'amber', 'blue', 'violet', 'rose', 'teal'];
+$colorMap = [];
+$colorIdx = 0;
+foreach ($scheduleRows as $row) {
+    if (!isset($colorMap[$row['course_code']])) {
+        $colorMap[$row['course_code']] = $cardColors[$colorIdx % count($cardColors)];
+        $colorIdx++;
+    }
+}
+
+// Unique teachers and rooms for filters
+$filterTeachers = array_unique(array_filter(array_column($scheduleRows, 'teacher_name')));
+$filterRooms = array_unique(array_filter(array_column($scheduleRows, 'room')));
+sort($filterTeachers);
+sort($filterRooms);
+
+$days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+$timeSlots = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
+?>
 <!-- SCHEDULES PAGE -->
 <div id="page-schedules" class="page-content hidden p-6 space-y-6">
     <div class="flex items-center justify-between">
@@ -24,15 +62,15 @@
         <div class="flex items-center gap-3">
             <select class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <option>All Teachers</option>
-                <option>John Doe</option>
-                <option>Jane Smith</option>
-                <option>Alan Turing</option>
+                <?php foreach ($filterTeachers as $ft): ?>
+                    <option><?= htmlspecialchars($ft) ?></option>
+                <?php endforeach; ?>
             </select>
             <select class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <option>All Rooms</option>
-                <option>Room 101</option>
-                <option>Room 102</option>
-                <option>Lab A</option>
+                <?php foreach ($filterRooms as $fr): ?>
+                    <option><?= htmlspecialchars($fr) ?></option>
+                <?php endforeach; ?>
             </select>
         </div>
     </div>
@@ -53,174 +91,32 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach ($timeSlots as $time): ?>
                     <tr class="border-b border-slate-100">
-                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50">7:00 AM</td>
-                        <td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td>
+                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50"><?= $time ?></td>
+                        <?php if ($time === '12:00 PM'): ?>
+                            <td class="px-2 py-2 text-center text-slate-400 text-xs" colspan="6">Lunch Break</td>
+                        <?php else: ?>
+                            <?php foreach ($days as $day): ?>
+                            <td class="px-2 py-2">
+                                <?php if (isset($grid[$day][$time])): ?>
+                                    <?php foreach ($grid[$day][$time] as $class): ?>
+                                        <?php $c = $colorMap[$class['course_code']]; ?>
+                                        <div class="bg-<?= $c ?>-100 border-l-4 border-<?= $c ?>-500 rounded p-2 cursor-pointer hover:bg-<?= $c ?>-200 transition-colors">
+                                            <p class="font-medium text-<?= $c ?>-900 text-xs"><?= htmlspecialchars($class['course_code']) ?></p>
+                                            <p class="text-<?= $c ?>-700 text-xs"><?= htmlspecialchars($class['name']) ?></p>
+                                            <?php if (!empty($class['teacher_name'])): ?>
+                                            <p class="text-<?= $c ?>-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i><?= htmlspecialchars($class['teacher_name']) ?></p>
+                                            <?php endif; ?>
+                                            <p class="text-<?= $c ?>-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i><?= htmlspecialchars($class['room']) ?></p>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </td>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tr>
-                    <tr class="border-b border-slate-100">
-                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50">8:00 AM</td>
-                        <td class="px-2 py-2">
-                            <div class="bg-indigo-100 border-l-4 border-indigo-500 rounded p-2 cursor-pointer hover:bg-indigo-200 transition-colors">
-                                <p class="font-medium text-indigo-900 text-xs">CS101</p>
-                                <p class="text-indigo-700 text-xs">Web Development</p>
-                                <p class="text-indigo-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>J. Doe</p>
-                                <p class="text-indigo-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Room 101</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-indigo-100 border-l-4 border-indigo-500 rounded p-2 cursor-pointer hover:bg-indigo-200 transition-colors">
-                                <p class="font-medium text-indigo-900 text-xs">CS101</p>
-                                <p class="text-indigo-700 text-xs">Web Development</p>
-                                <p class="text-indigo-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>J. Doe</p>
-                                <p class="text-indigo-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Room 101</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-emerald-100 border-l-4 border-emerald-500 rounded p-2 cursor-pointer hover:bg-emerald-200 transition-colors">
-                                <p class="font-medium text-emerald-900 text-xs">Math101</p>
-                                <p class="text-emerald-700 text-xs">Calculus I</p>
-                                <p class="text-emerald-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>A. Turing</p>
-                                <p class="text-emerald-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Room 203</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                    </tr>
-                    <tr class="border-b border-slate-100">
-                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50">9:00 AM</td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-pink-100 border-l-4 border-pink-500 rounded p-2 cursor-pointer hover:bg-pink-200 transition-colors">
-                                <p class="font-medium text-pink-900 text-xs">IT204</p>
-                                <p class="text-pink-700 text-xs">Networking</p>
-                                <p class="text-pink-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>J. Smith</p>
-                                <p class="text-pink-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Lab A</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-pink-100 border-l-4 border-pink-500 rounded p-2 cursor-pointer hover:bg-pink-200 transition-colors">
-                                <p class="font-medium text-pink-900 text-xs">IT204</p>
-                                <p class="text-pink-700 text-xs">Networking</p>
-                                <p class="text-pink-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>J. Smith</p>
-                                <p class="text-pink-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Lab A</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2"></td>
-                    </tr>
-                    <tr class="border-b border-slate-100">
-                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50">10:00 AM</td>
-                        <td class="px-2 py-2">
-                            <div class="bg-blue-100 border-l-4 border-blue-500 rounded p-2 cursor-pointer hover:bg-blue-200 transition-colors">
-                                <p class="font-medium text-blue-900 text-xs">IT202</p>
-                                <p class="text-blue-700 text-xs">Database Systems</p>
-                                <p class="text-blue-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>J. Doe</p>
-                                <p class="text-blue-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Lab B</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-blue-100 border-l-4 border-blue-500 rounded p-2 cursor-pointer hover:bg-blue-200 transition-colors">
-                                <p class="font-medium text-blue-900 text-xs">IT202</p>
-                                <p class="text-blue-700 text-xs">Database Systems</p>
-                                <p class="text-blue-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>J. Doe</p>
-                                <p class="text-blue-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Lab B</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-emerald-100 border-l-4 border-emerald-500 rounded p-2 cursor-pointer hover:bg-emerald-200 transition-colors">
-                                <p class="font-medium text-emerald-900 text-xs">Math101</p>
-                                <p class="text-emerald-700 text-xs">Calculus I (Lab)</p>
-                                <p class="text-emerald-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>A. Turing</p>
-                                <p class="text-emerald-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Room 203</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                    </tr>
-                    <tr class="border-b border-slate-100">
-                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50">11:00 AM</td>
-                        <td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td>
-                    </tr>
-                    <tr class="border-b border-slate-100">
-                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50">12:00 PM</td>
-                        <td class="px-2 py-2 text-center text-slate-400 text-xs" colspan="6">Lunch Break</td>
-                    </tr>
-                    <tr class="border-b border-slate-100">
-                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50">1:00 PM</td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-pink-100 border-l-4 border-pink-500 rounded p-2 cursor-pointer hover:bg-pink-200 transition-colors">
-                                <p class="font-medium text-pink-900 text-xs">IT301</p>
-                                <p class="text-pink-700 text-xs">Cybersecurity</p>
-                                <p class="text-pink-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>J. Smith</p>
-                                <p class="text-pink-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Lab A</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-pink-100 border-l-4 border-pink-500 rounded p-2 cursor-pointer hover:bg-pink-200 transition-colors">
-                                <p class="font-medium text-pink-900 text-xs">IT301</p>
-                                <p class="text-pink-700 text-xs">Cybersecurity</p>
-                                <p class="text-pink-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>J. Smith</p>
-                                <p class="text-pink-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Lab A</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2"></td>
-                    </tr>
-                    <tr class="border-b border-slate-100">
-                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50">2:00 PM</td>
-                        <td class="px-2 py-2">
-                            <div class="bg-amber-100 border-l-4 border-amber-500 rounded p-2 cursor-pointer hover:bg-amber-200 transition-colors">
-                                <p class="font-medium text-amber-900 text-xs">ENG102</p>
-                                <p class="text-amber-700 text-xs">Literature</p>
-                                <p class="text-amber-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>M. Garcia</p>
-                                <p class="text-amber-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Room 305</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-amber-100 border-l-4 border-amber-500 rounded p-2 cursor-pointer hover:bg-amber-200 transition-colors">
-                                <p class="font-medium text-amber-900 text-xs">ENG102</p>
-                                <p class="text-amber-700 text-xs">Literature</p>
-                                <p class="text-amber-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>M. Garcia</p>
-                                <p class="text-amber-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Room 305</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2"></td>
-                    </tr>
-                    <tr class="border-b border-slate-100">
-                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50">3:00 PM</td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-amber-100 border-l-4 border-amber-500 rounded p-2 cursor-pointer hover:bg-amber-200 transition-colors">
-                                <p class="font-medium text-amber-900 text-xs">ENG201</p>
-                                <p class="text-amber-700 text-xs">Creative Writing</p>
-                                <p class="text-amber-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>M. Garcia</p>
-                                <p class="text-amber-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Room 305</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2">
-                            <div class="bg-amber-100 border-l-4 border-amber-500 rounded p-2 cursor-pointer hover:bg-amber-200 transition-colors">
-                                <p class="font-medium text-amber-900 text-xs">ENG201</p>
-                                <p class="text-amber-700 text-xs">Creative Writing</p>
-                                <p class="text-amber-600 text-xs mt-1"><i class="fas fa-user text-[10px] mr-1"></i>M. Garcia</p>
-                                <p class="text-amber-600 text-xs"><i class="fas fa-door-open text-[10px] mr-1"></i>Room 305</p>
-                            </div>
-                        </td>
-                        <td class="px-2 py-2"></td>
-                        <td class="px-2 py-2"></td>
-                    </tr>
-                    <tr class="border-b border-slate-100">
-                        <td class="px-4 py-3 text-slate-500 font-medium bg-slate-50">4:00 PM</td>
-                        <td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td><td class="px-2 py-2"></td>
-                    </tr>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
