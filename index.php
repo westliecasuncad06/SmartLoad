@@ -533,10 +533,10 @@ try {
                                         <i class="fas fa-chevron-down absolute right-3 top-3 text-slate-400 text-xs pointer-events-none"></i>
                                     </div>
                                     <div class="flex items-center border border-slate-300 rounded-lg overflow-hidden">
-                                        <button class="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors text-sm font-medium border-r border-slate-300">
+                                        <button id="btnDashboardExportCsv" type="button" class="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors text-sm font-medium border-r border-slate-300">
                                             <i class="fas fa-file-csv text-green-600"></i> CSV
                                         </button>
-                                        <button class="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors text-sm font-medium">
+                                        <button id="btnDashboardExportPdf" type="button" class="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors text-sm font-medium">
                                             <i class="fas fa-file-pdf text-red-600"></i> PDF
                                         </button>
                                     </div>
@@ -544,10 +544,10 @@ try {
                             </div>
                             <div class="flex items-center gap-2 mt-3">
                                 <span class="text-xs text-slate-500">Quick filters:</span>
-                                <button class="px-3 py-1 text-xs bg-slate-100 text-slate-700 rounded-full hover:bg-slate-200 transition-colors">All</button>
-                                <button class="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors">Optimal</button>
-                                <button class="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors">Overload</button>
-                                <button class="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors">Manual Override</button>
+                                <button type="button" class="dashboard-quick-filter px-3 py-1 text-xs bg-slate-100 text-slate-700 rounded-full hover:bg-slate-200 transition-colors" data-status="all">All</button>
+                                <button type="button" class="dashboard-quick-filter px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors" data-status="optimal">Optimal</button>
+                                <button type="button" class="dashboard-quick-filter px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors" data-status="overload">Overload</button>
+                                <button type="button" class="dashboard-quick-filter px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors" data-status="manual">Manual Override</button>
                             </div>
                         </div>
                         <div class="overflow-x-auto">
@@ -569,7 +569,7 @@ try {
                                         <th class="px-6 py-3 text-center text-slate-600 font-semibold">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="dashboardReportTbody">
                                     <?php
                                     $avatarGradients = [
                                         'from-blue-400 to-indigo-500',
@@ -653,7 +653,10 @@ try {
                                             }
                                         }
                                     ?>
-                                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors <?= $rowBg ?>">
+                                    <?php
+                                        $rowStatus = ($hasManual ? 'manual' : ($isOverload ? 'overload' : 'optimal'));
+                                    ?>
+                                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors <?= $rowBg ?>" data-status="<?= htmlspecialchars($rowStatus) ?>" data-teacher-id="<?= (int)$ta['teacher_id'] ?>">
                                         <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"></td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-3">
@@ -723,7 +726,7 @@ try {
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center justify-center gap-2">
-                                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View Details"><i class="fas fa-eye text-sm"></i></button>
+                                                <button type="button" class="dashboard-action-view p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View Details" data-teacher-id="<?= (int)$ta['teacher_id'] ?>" data-teacher-name="<?= htmlspecialchars($ta['teacher_name'], ENT_QUOTES) ?>"><i class="fas fa-eye text-sm"></i></button>
                                                 <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onclick="openModal(<?= $firstSubject['assignment_id'] ?>)" title="Manual Override"><i class="fas fa-pen-to-square text-sm"></i></button>
                                             </div>
                                         </td>
@@ -733,7 +736,7 @@ try {
                                     <?php foreach ($unassignedSubjects as $us):
                                         $uSchedLines = !empty($unassignedSchedBySubject[(int)$us['id']]) ? formatSubjectSchedules($unassignedSchedBySubject[(int)$us['id']]) : [];
                                     ?>
-                                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-amber-50/30">
+                                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-amber-50/30" data-status="unassigned" data-subject-id="<?= (int)$us['id'] ?>">
                                         <td class="px-6 py-4"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"></td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-3">
@@ -781,7 +784,7 @@ try {
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center justify-center gap-2">
-                                                <button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View Details"><i class="fas fa-eye text-sm"></i></button>
+                                                <button type="button" class="dashboard-action-view-unassigned p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="View Details" data-subject-id="<?= (int)$us['id'] ?>" data-course-code="<?= htmlspecialchars($us['course_code'], ENT_QUOTES) ?>"><i class="fas fa-eye text-sm"></i></button>
                                                 <button class="p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded transition-colors" onclick="openModal()" title="Assign Teacher"><i class="fas fa-user-plus text-sm"></i></button>
                                             </div>
                                         </td>
@@ -935,6 +938,54 @@ try {
             <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end bg-slate-50 rounded-b-xl">
                 <button onclick="closeModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Cancel</button>
                 <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2"><i class="fas fa-check"></i> Save Override</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: DASHBOARD TEACHER LOAD DETAILS -->
+    <div id="dashboardTeacherLoadModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4 transform transition-all">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Teacher Load Details</h2>
+                    <p class="text-sm text-slate-500 mt-0.5">Assigned subjects for this teacher</p>
+                </div>
+                <button type="button" id="btnDashboardTeacherLoadClose" class="text-slate-400 hover:text-slate-600 p-1"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-2">
+                        <p class="text-xs text-slate-400">Teacher</p>
+                        <p id="dashTeacherName" class="text-sm font-semibold text-slate-900">—</p>
+                        <p id="dashTeacherEmail" class="text-xs text-slate-500">—</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Load</p>
+                        <p class="text-sm text-slate-900"><span id="dashTeacherUnits" class="font-semibold">—</span></p>
+                        <p id="dashTeacherType" class="text-xs text-slate-500">—</p>
+                    </div>
+                </div>
+
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <div class="max-h-72 overflow-y-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200">
+                                    <th class="px-4 py-2 text-left text-slate-600 font-semibold">Code</th>
+                                    <th class="px-4 py-2 text-left text-slate-600 font-semibold">Subject</th>
+                                    <th class="px-4 py-2 text-left text-slate-600 font-semibold">Units</th>
+                                    <th class="px-4 py-2 text-left text-slate-600 font-semibold">Schedule</th>
+                                    <th class="px-4 py-2 text-left text-slate-600 font-semibold">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashTeacherSubjectsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end bg-slate-50 rounded-b-xl">
+                <button type="button" id="btnDashboardTeacherLoadCancel" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Close</button>
+                <button type="button" id="btnDashboardTeacherSendPdf" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2"><i class="fas fa-paper-plane"></i> Send PDF to Email</button>
             </div>
         </div>
     </div>

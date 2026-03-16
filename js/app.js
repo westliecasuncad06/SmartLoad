@@ -118,6 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'historyModal',
         'uploadConflictModal',
         'conflictModal',
+        'dashboardTeacherLoadModal',
         'teacherImportModal',
         'teacherAddModal',
         'teacherViewModal',
@@ -155,7 +156,249 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize filter controls (Teachers & Subjects)
     initTeacherFilters();
     initSubjectFilters();
+
+    // Initialize dashboard controls (filters/export/actions)
+    initDashboardReport();
 });
+
+// --------------------------------------------------
+// Dashboard - Load Assignment Report
+// --------------------------------------------------
+function openDashboardTeacherLoadModal() {
+    const modal = document.getElementById('dashboardTeacherLoadModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeDashboardTeacherLoadModal() {
+    const modal = document.getElementById('dashboardTeacherLoadModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function normalizeDashboardStatus(value) {
+    const v = String(value || '').trim().toLowerCase();
+    if (v === 'manual override') return 'manual';
+    if (v === 'all status') return 'all';
+    return v;
+}
+
+function applyDashboardStatusFilter(tbody, status) {
+    const wanted = normalizeDashboardStatus(status);
+    tbody.querySelectorAll('tr').forEach(tr => {
+        const rowStatus = normalizeDashboardStatus(tr.dataset.status || '');
+        const show = (wanted === 'all' || wanted === '' || rowStatus === wanted);
+        tr.style.display = show ? '' : 'none';
+    });
+}
+
+function downloadBlob(filename, blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportDashboardCsv(tbody) {
+    const headers = ['Teacher', 'Expertise', 'Assigned Subjects', 'Schedule', 'Total Units', 'Rationale', 'Status'];
+    const rows = [headers];
+
+    tbody.querySelectorAll('tr').forEach(tr => {
+        if (tr.style.display === 'none') return;
+        const tds = Array.from(tr.querySelectorAll('td'));
+        if (tds.length < 9) return;
+
+        const teacher = tds[1]?.innerText?.trim() || '';
+        const expertise = tds[2]?.innerText?.trim().replace(/\s+/g, ' ') || '';
+        const assigned = tds[3]?.innerText?.trim().replace(/\s*\n\s*/g, '; ') || '';
+        const schedule = tds[4]?.innerText?.trim().replace(/\s*\n\s*/g, '; ') || '';
+        const totalUnits = tds[5]?.innerText?.trim().replace(/\s+/g, ' ') || '';
+        const rationale = tds[6]?.innerText?.trim().replace(/\s+/g, ' ') || '';
+        const status = tds[7]?.innerText?.trim().replace(/\s+/g, ' ') || '';
+
+        rows.push([teacher, expertise, assigned, schedule, totalUnits, rationale, status]);
+    });
+
+    const csvLine = (fields) => fields
+        .map(v => {
+            const s = String(v ?? '');
+            return /[",\n]/.test(s) ? '"' + s.replaceAll('"', '""') + '"' : s;
+        })
+        .join(',');
+
+    const csv = rows.map(csvLine).join('\n') + '\n';
+    downloadBlob('load_assignment_report.csv', new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+}
+
+function exportDashboardPdfPrint(tbody) {
+    const visibleRows = Array.from(tbody.querySelectorAll('tr')).filter(tr => tr.style.display !== 'none');
+    const htmlRows = visibleRows.map(tr => {
+        const tds = Array.from(tr.querySelectorAll('td'));
+        if (tds.length < 9) return '';
+        const get = (i) => (tds[i]?.innerText || '').trim();
+        return `<tr>
+            <td>${escapeHtml(get(1))}</td>
+            <td>${escapeHtml(get(3).replace(/\s*\n\s*/g, '; '))}</td>
+            <td>${escapeHtml(get(5))}</td>
+            <td>${escapeHtml(get(7))}</td>
+        </tr>`;
+    }).join('');
+
+    const w = window.open('', '_blank');
+    if (!w) {
+        alert('Popup blocked. Please allow popups to export PDF.');
+        return;
+    }
+
+    w.document.open();
+    w.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Load Assignment Report</title>
+  <style>
+    body{font-family:Arial, sans-serif; padding:24px;}
+    h1{font-size:18px; margin:0 0 12px;}
+    table{width:100%; border-collapse:collapse; font-size:12px;}
+    th,td{border:1px solid #ddd; padding:8px; vertical-align:top;}
+    th{background:#f5f5f5; text-align:left;}
+  </style>
+</head>
+<body>
+  <h1>Load Assignment Report</h1>
+  <table>
+    <thead><tr><th>Teacher</th><th>Assigned Subjects</th><th>Total Units</th><th>Status</th></tr></thead>
+    <tbody>${htmlRows}</tbody>
+  </table>
+</body>
+</html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+}
+
+async function fetchTeacherLoad(teacherId) {
+    const res = await fetch('api/get_teacher_load.php?teacher_id=' + encodeURIComponent(String(teacherId)));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data || data.status !== 'success') {
+        throw new Error((data && data.message) ? data.message : 'Failed to load teacher details.');
+    }
+    return data;
+}
+
+function initDashboardReport() {
+    const tbody = document.getElementById('dashboardReportTbody');
+    const statusFilter = document.getElementById('statusFilter');
+    const btnCsv = document.getElementById('btnDashboardExportCsv');
+    const btnPdf = document.getElementById('btnDashboardExportPdf');
+
+    if (!tbody || !statusFilter) return;
+
+    const apply = () => applyDashboardStatusFilter(tbody, statusFilter.value);
+    statusFilter.addEventListener('change', apply);
+    apply();
+
+    document.querySelectorAll('.dashboard-quick-filter').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const v = btn.dataset.status || 'all';
+            statusFilter.value = v;
+            apply();
+        });
+    });
+
+    if (btnCsv) {
+        btnCsv.addEventListener('click', () => exportDashboardCsv(tbody));
+    }
+    if (btnPdf) {
+        btnPdf.addEventListener('click', () => exportDashboardPdfPrint(tbody));
+    }
+
+    const closeBtn = document.getElementById('btnDashboardTeacherLoadClose');
+    const closeBtn2 = document.getElementById('btnDashboardTeacherLoadCancel');
+    if (closeBtn) closeBtn.addEventListener('click', closeDashboardTeacherLoadModal);
+    if (closeBtn2) closeBtn2.addEventListener('click', closeDashboardTeacherLoadModal);
+
+    const sendBtn = document.getElementById('btnDashboardTeacherSendPdf');
+    if (sendBtn) {
+        sendBtn.addEventListener('click', async () => {
+            const teacherId = Number(sendBtn.dataset.teacherId || 0);
+            if (!teacherId) return;
+
+            sendBtn.disabled = true;
+            const prev = sendBtn.textContent;
+            sendBtn.textContent = 'Sending...';
+            try {
+                const data = await postJson('api/send_teacher_load_pdf.php', { teacher_id: teacherId });
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Failed to send PDF.');
+                }
+                alert('PDF sent successfully.');
+            } catch (err) {
+                alert('Send failed: ' + (err && err.message ? err.message : String(err)));
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = prev;
+            }
+        });
+    }
+
+    tbody.addEventListener('click', async (e) => {
+        const target = e.target;
+        const btn = target && target.closest ? target.closest('.dashboard-action-view') : null;
+        if (!btn) return;
+
+        const teacherId = Number(btn.dataset.teacherId || 0);
+        if (!teacherId) return;
+
+        try {
+            const data = await fetchTeacherLoad(teacherId);
+            const teacher = data.teacher || {};
+            const subjects = Array.isArray(data.subjects) ? data.subjects : [];
+
+            const nameEl = document.getElementById('dashTeacherName');
+            const emailEl = document.getElementById('dashTeacherEmail');
+            const unitsEl = document.getElementById('dashTeacherUnits');
+            const typeEl = document.getElementById('dashTeacherType');
+            const bodyEl = document.getElementById('dashTeacherSubjectsBody');
+
+            if (nameEl) nameEl.textContent = teacher.name || btn.dataset.teacherName || '—';
+            if (emailEl) emailEl.textContent = teacher.email || '—';
+            if (unitsEl) unitsEl.textContent = (teacher.current_units !== undefined && teacher.max_units !== undefined)
+                ? (String(teacher.current_units) + ' / ' + String(teacher.max_units) + ' units')
+                : '—';
+            if (typeEl) typeEl.textContent = (teacher.type ? String(teacher.type) + ' Faculty' : '—');
+
+            if (bodyEl) {
+                if (!subjects.length) {
+                    bodyEl.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">No assigned subjects.</td></tr>`;
+                } else {
+                    bodyEl.innerHTML = subjects.map(s => {
+                        const sched = Array.isArray(s.schedule_lines) && s.schedule_lines.length
+                            ? s.schedule_lines.join('; ')
+                            : '—';
+                        return `<tr class="border-b border-slate-100">
+                            <td class="px-4 py-2 font-medium text-indigo-600">${escapeHtml(s.course_code || '')}</td>
+                            <td class="px-4 py-2 text-slate-900">${escapeHtml(s.subject_name || '')}</td>
+                            <td class="px-4 py-2 text-slate-700">${escapeHtml(s.subject_units ?? '')}</td>
+                            <td class="px-4 py-2 text-slate-700 text-xs">${escapeHtml(sched)}</td>
+                            <td class="px-4 py-2 text-slate-700">${escapeHtml(s.assignment_status || '')}</td>
+                        </tr>`;
+                    }).join('');
+                }
+            }
+
+            if (sendBtn) {
+                sendBtn.dataset.teacherId = String(teacherId);
+            }
+
+            openDashboardTeacherLoadModal();
+        } catch (err) {
+            alert('Failed to load details: ' + (err && err.message ? err.message : String(err)));
+        }
+    });
+}
 
 // --------------------------------------------------
 // Filters (Teachers & Subjects)
