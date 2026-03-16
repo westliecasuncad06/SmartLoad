@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FacultyFlow - Smart Faculty Scheduling</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome via CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div class="flex h-screen">
+        <!-- SIDEBAR -->
+        <aside class="fixed left-0 top-0 h-screen w-64 bg-slate-900 text-white shadow-xl flex flex-col">
+            <!-- Logo -->
+            <div class="p-6 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <div class="bg-indigo-500 p-2 rounded-lg">
+                        <i class="fas fa-graduation-cap text-lg"></i>
+                    </div>
+                    <h1 class="text-xl font-bold">FacultyFlow</h1>
+                </div>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <nav class="flex-1 px-4 py-8 space-y-2">
+                <!-- Dashboard (Active) -->
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600 text-white font-medium transition-all">
+                    <i class="fas fa-chart-line w-5 text-center"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                <!-- Teachers -->
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fas fa-chalkboard-user w-5 text-center"></i>
+                    <span>Teachers</span>
+                </a>
+                
+                <!-- Subjects -->
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fas fa-book w-5 text-center"></i>
+                    <span>Subjects</span>
+                </a>
+                
+                <!-- Reports -->
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fas fa-file-chart-line w-5 text-center"></i>
+                    <span>Reports</span>
+                </a>
+                
+                <!-- Settings -->
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fas fa-cog w-5 text-center"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            
+            <!-- Footer -->
+            <div class="p-4 border-t border-slate-800">
+                <div class="flex items-center gap-2 px-2 py-2">
+                    <div class="w-8 h-8 bg-indigo-500 rounded-full"></div>
+                    <span class="text-sm text-slate-300">Admin User</span>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- MAIN CONTENT -->
+        <main class="ml-64 flex-1 flex flex-col">
+            <!-- TOP NAVBAR -->
+            <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <!-- Search Bar -->
+                    <div class="flex-1 max-w-md">
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                placeholder="Search teachers, subjects..." 
+                                class="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            >
+                            <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Section: Notifications & Profile -->
+                    <div class="flex items-center gap-6 ml-8">
+                        <!-- Notification Bell -->
+                        <button class="relative text-slate-600 hover:text-slate-900 transition-colors">
+                            <i class="fas fa-bell text-lg"></i>
+                            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                        </button>
+                        
+                        <!-- User Avatar -->
+                        <div class="flex items-center gap-3 pl-6 border-l border-slate-200">
+                            <div class="w-10 h-10 bg-gradient-to-br from-indigo-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                PC
+                            </div>
+                            <div class="hidden sm:block">
+                                <p class="text-sm font-medium text-slate-900">Program Chair</p>
+                                <p class="text-xs text-slate-500">Education Dept</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- PAGE CONTENT -->
+            <div class="flex-1 overflow-auto">
+                <div class="p-6 space-y-6">
+                    <!-- Page Title -->
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-900">Dashboard</h2>
+                        <p class="text-slate-600 mt-1">Welcome back! Here's your scheduling overview.</p>
+                    </div>
+                    
+                    <!-- SECTION 1: QUICK STATS CARDS -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Card 1: Total Teachers -->
+                        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border-l-4 border-indigo-500">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="text-slate-600 text-sm font-medium">Total Teachers</p>
+                                    <p class="text-3xl font-bold text-slate-900 mt-2">42</p>
+                                </div>
+                                <div class="bg-indigo-100 p-3 rounded-lg">
+                                    <i class="fas fa-users text-indigo-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Card 2: Total Subjects -->
+                        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border-l-4 border-blue-500">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="text-slate-600 text-sm font-medium">Total Subjects</p>
+                                    <p class="text-3xl font-bold text-slate-900 mt-2">156</p>
+                                </div>
+                                <div class="bg-blue-100 p-3 rounded-lg">
+                                    <i class="fas fa-books text-blue-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Card 3: Pending Conflicts -->
+                        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border-l-4 border-green-500">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="text-slate-600 text-sm font-medium">Pending Conflicts</p>
+                                    <p class="text-3xl font-bold text-green-600 mt-2">0</p>
+                                </div>
+                                <div class="bg-green-100 p-3 rounded-lg">
+                                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Card 4: Avg. Match Score -->
+                        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border-l-4 border-blue-500">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="text-slate-600 text-sm font-medium">Avg. Match Score</p>
+                                    <p class="text-3xl font-bold text-blue-600 mt-2">94%</p>
+                                </div>
+                                <div class="bg-blue-100 p-3 rounded-lg">
+                                    <i class="fas fa-chart-pie text-blue-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SECTION 2: COMMAND CENTER (Upload & Generate) -->
+                    <div class="bg-white rounded-lg shadow-md p-8">
+                        <h3 class="text-xl font-bold text-slate-900 mb-6">Schedule Generator</h3>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                            <!-- Left Side: Upload Zones -->
+                            <div class="lg:col-span-3 space-y-4">
+                                <!-- Upload Teachers CSV -->
+                                <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 hover:border-indigo-500 hover:bg-indigo-50 transition-all cursor-pointer">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <i class="fas fa-cloud-arrow-up text-2xl text-slate-400 group-hover:text-indigo-500"></i>
+                                        <div class="text-center">
+                                            <p class="font-medium text-slate-900">Upload Teachers CSV</p>
+                                            <p class="text-sm text-slate-600 mt-1">Drag and drop, or click to browse</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Upload Subjects CSV -->
+                                <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 hover:border-indigo-500 hover:bg-indigo-50 transition-all cursor-pointer">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <i class="fas fa-cloud-arrow-up text-2xl text-slate-400"></i>
+                                        <div class="text-center">
+                                            <p class="font-medium text-slate-900">Upload Subjects CSV</p>
+                                            <p class="text-sm text-slate-600 mt-1">Drag and drop, or click to browse</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Right Side: Generate Button -->
+                            <div class="lg:col-span-2 flex items-center">
+                                <button class="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-semibold py-4 px-6 rounded-lg hover:shadow-lg hover:from-indigo-700 hover:to-indigo-800 transition-all transform hover:scale-105">
+                                    <i class="fas fa-wand-magic-sparkles mr-2"></i>
+                                    Generate Smart Schedule
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SECTION 3: LOAD ASSIGNMENT REPORT (Data Table) -->
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                        <!-- Table Header -->
+                        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-slate-900">Load Assignment Report</h3>
+                            <div class="flex gap-2">
+                                <button class="flex items-center gap-2 px-3 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">
+                                    <i class="fas fa-download"></i>
+                                    PDF/CSV
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200">
+                                        <th class="px-6 py-3 text-left text-slate-600 font-semibold">Teacher Name</th>
+                                        <th class="px-6 py-3 text-left text-slate-600 font-semibold">Assigned Subject</th>
+                                        <th class="px-6 py-3 text-left text-slate-600 font-semibold">Schedule</th>
+                                        <th class="px-6 py-3 text-left text-slate-600 font-semibold">Total Units</th>
+                                        <th class="px-6 py-3 text-left text-slate-600 font-semibold">AI Rationale</th>
+                                        <th class="px-6 py-3 text-left text-slate-600 font-semibold">Status</th>
+                                        <th class="px-6 py-3 text-center text-slate-600 font-semibold">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Row 1: Perfect Match -->
+                                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                                        <td class="px-6 py-4 font-medium text-slate-900">John Doe</td>
+                                        <td class="px-6 py-4 text-slate-700">CS101 Web Dev</td>
+                                        <td class="px-6 py-4 text-slate-700">Mon/Wed 9AM</td>
+                                        <td class="px-6 py-4 text-slate-700">15 Units</td>
+                                        <td class="px-6 py-4 text-slate-600 text-xs max-w-xs">9/10 match based on 5 years PHP experience</td>
+                                        <td class="px-6 py-4">
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Optimal
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button class="text-indigo-600 hover:text-indigo-800 transition-colors" onclick="openModal()">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- Row 2: Overload Flag -->
+                                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                                        <td class="px-6 py-4 font-medium text-slate-900">Jane Smith</td>
+                                        <td class="px-6 py-4 text-slate-700">IT204 Networking</td>
+                                        <td class="px-6 py-4 text-slate-700">Tue/Thu 1PM</td>
+                                        <td class="px-6 py-4 text-slate-700">21 Units</td>
+                                        <td class="px-6 py-4 text-slate-600 text-xs max-w-xs">Assigned due to high expertise, but exceeds 18 unit cap</td>
+                                        <td class="px-6 py-4">
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                Overload
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button class="text-indigo-600 hover:text-indigo-800 transition-colors" onclick="openModal()">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- Row 3: Standard -->
+                                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                                        <td class="px-6 py-4 font-medium text-slate-900">Alan Turing</td>
+                                        <td class="px-6 py-4 text-slate-700">Math101 Calculus</td>
+                                        <td class="px-6 py-4 text-slate-700">Fri 10AM</td>
+                                        <td class="px-6 py-4 text-slate-700">12 Units</td>
+                                        <td class="px-6 py-4 text-slate-600 text-xs max-w-xs">8/10 match based on availability</td>
+                                        <td class="px-6 py-4">
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Optimal
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button class="text-indigo-600 hover:text-indigo-800 transition-colors" onclick="openModal()">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- Row 4: Standard -->
+                                    <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                                        <td class="px-6 py-4 font-medium text-slate-900">Maria Garcia</td>
+                                        <td class="px-6 py-4 text-slate-700">ENG102 Literature</td>
+                                        <td class="px-6 py-4 text-slate-700">Mon/Wed 2PM</td>
+                                        <td class="px-6 py-4 text-slate-700">18 Units</td>
+                                        <td class="px-6 py-4 text-slate-600 text-xs max-w-xs">9/10 match - Perfect fit with teaching preferences</td>
+                                        <td class="px-6 py-4">
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Optimal
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button class="text-indigo-600 hover:text-indigo-800 transition-colors" onclick="openModal()">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- MODAL: MANUAL OVERRIDE -->
+    <div id="overrideModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-200">
+                <h2 class="text-lg font-bold text-slate-900">Reassign Subject</h2>
+                <p class="text-sm text-slate-600 mt-1">Manually override the AI assignment</p>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="px-6 py-6 space-y-4">
+                <!-- Teacher Dropdown -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Select Teacher</label>
+                    <select class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <option value="">-- Choose a teacher --</option>
+                        <option value="john_doe">John Doe</option>
+                        <option value="jane_smith">Jane Smith</option>
+                        <option value="alan_turing">Alan Turing</option>
+                        <option value="maria_garcia">Maria Garcia</option>
+                        <option value="robert_johnson">Robert Johnson</option>
+                    </select>
+                </div>
+                
+                <!-- Reason Text Area -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Reason for Override</label>
+                    <textarea 
+                        placeholder="Enter the reason for this manual reassignment..." 
+                        rows="4"
+                        class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    ></textarea>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
+                <button 
+                    onclick="closeModal()" 
+                    class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium"
+                >
+                    Cancel
+                </button>
+                <button 
+                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                >
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MINIMAL MODAL SCRIPT -->
+    <script>
+        function openModal() {
+            document.getElementById('overrideModal').classList.remove('hidden');
+        }
+        
+        function closeModal() {
+            document.getElementById('overrideModal').classList.add('hidden');
+        }
+        
+        // Close modal when clicking outside the modal content
+        document.getElementById('overrideModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
