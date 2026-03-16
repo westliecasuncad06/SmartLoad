@@ -1,6 +1,6 @@
 # SmartLoad Documentation
 
-Last updated: March 17, 2026
+Last updated: March 16, 2026
 
 ## Overview
 
@@ -123,7 +123,8 @@ Important note: the “Department” filter is simulated by searching `expertise
 ### Subjects (in `includes/pages/subjects.php`)
 
 - List subjects (non-archived when column exists)
-- Shows “Assigned To” and “Status” based on the latest assignment per subject
+- Shows “Assigned To” based on the latest assignment per subject
+- The “Assigned/Unassigned” badge is based on whether any assignment row exists for the subject (it does not currently filter by assignment status)
 - Add / Edit / Archive via modals (calls the corresponding `api/*subject*.php` endpoints)
 - Filter + search (calls `api/filter_subjects.php`)
 
@@ -160,6 +161,11 @@ Current limitation: teacher/room dropdowns are display-only (no filtering logic 
 	- based on remaining unit capacity (not on `teacher_availability` time windows)
 4. Optional Gemini refinement:
 	- if a valid Gemini key is set and cURL is available, it asks Gemini to pick the best teacher from a shortlist
+
+Important note about “unassigned”:
+
+- Subjects are considered assigned only if they have an assignment with status `Pending` or `Approved`.
+- A subject whose latest assignment is `Manual` is treated as unassigned by the generator and may receive an additional new `Pending` assignment row.
 
 Schedule overlap detection:
 
@@ -230,6 +236,7 @@ Response:
 Note:
 
 - The frontend currently checks `ai_enabled` / `ai_calls`, but the endpoint does not include these fields in the response.
+- “Unassigned” is determined by absence of `Pending`/`Approved` rows only (manual assignments do not exclude the subject).
 
 ### Policy Settings
 
@@ -300,6 +307,10 @@ Query params:
 - `search` (optional): matches code/name/program/prereq/teacher
 - `program` (optional): exact match, or `All`
 - `status` (optional): `all` | `assigned` | `unassigned`
+
+Note:
+
+- “assigned/unassigned” is computed by whether an assignment row exists (latest assignment id is present), not by checking the assignment status.
 
 ### Teacher Load Details + Email PDF
 
