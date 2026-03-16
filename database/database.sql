@@ -9,7 +9,9 @@ CREATE TABLE teachers (
     max_units TINYINT UNSIGNED NOT NULL,
     current_units TINYINT UNSIGNED NOT NULL DEFAULT 0,
     expertise_tags VARCHAR(255) DEFAULT NULL,
-    INDEX idx_teachers_type (type)
+    archived TINYINT(1) NOT NULL DEFAULT 0,
+    INDEX idx_teachers_type (type),
+    INDEX idx_teachers_archived (archived)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE subjects (
