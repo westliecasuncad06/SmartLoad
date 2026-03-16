@@ -1,0 +1,15 @@
+course_code,name,program,units,prerequisites
+CS204,Computer Architecture,BS Computer Science,3,CS102
+CS205,Operating Systems,BS Computer Science,3,CS201
+CS206,Human-Computer Interaction,BS Computer Science,3,CS101
+CS207,Web Programming II,BS Computer Science,3,CS101
+CS208,Mobile App Development,BS Computer Science,3,CS102
+CS209,Introduction to AI,BS Computer Science,3,CS201
+CS210,Machine Learning Fundamentals,BS Computer Science,3,CS209
+CS211,Data Analytics,BS Computer Science,3,IT202
+CS212,Information Security,BS Computer Science,3,IT204
+CS213,Capstone Project I,BS Computer Science,3,CS301
+IT201,IT Fundamentals II,BS Information Technology,3,IT102
+IT203,Data Communications,BS Information Technology,3,IT204
+IT206,IT Project Management,BS Information Technology,3,IT205
+GEN103,Technical Writing,General Education,3,GEN101

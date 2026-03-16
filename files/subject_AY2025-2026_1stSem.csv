@@ -1,0 +1,13 @@
+course_code,name,program,units,prerequisites
+IT207,Cloud Computing,BS Information Technology,3,IT205
+IT208,Web Systems and Technologies,BS Information Technology,3,CS101
+IT209,Network Security,BS Information Technology,3,IT204
+IT210,Database Administration,BS Information Technology,3,IT202
+IT211,IT Service Management,BS Information Technology,3,IT206
+MATH201,Linear Algebra,BS Mathematics,3,MATH102
+MATH202,Differential Equations,BS Mathematics,3,MATH102
+MATH203,Probability and Statistics,BS Mathematics,3,MATH101
+MATH204,Numerical Methods,BS Mathematics,3,MATH201
+MATH205,Discrete Structures,BS Mathematics,3,MATH101
+MATH206,Mathematical Modeling,BS Mathematics,3,MATH202
+GEN104,Research Methods,General Education,3,GEN103
