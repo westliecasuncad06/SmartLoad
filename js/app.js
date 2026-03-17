@@ -2258,7 +2258,7 @@ function initSubjectsPage() {
         importUploadBtn.addEventListener('click', async () => {
             const input = document.getElementById('subjectCsvFileInput');
             if (!input || !input.files || !input.files.length) {
-                alert('Please select a CSV file to upload.');
+                showToast('warning', 'No File Selected', 'Please select a CSV file to upload.');
                 return;
             }
             const file = input.files[0];
@@ -2276,7 +2276,7 @@ function initSubjectsPage() {
 
                 location.reload();
             } catch (err) {
-                alert('Upload failed: ' + (err && err.message ? err.message : String(err)));
+                showLoadingError('Upload Failed', err && err.message ? err.message : String(err));
             } finally {
                 importUploadBtn.disabled = false;
                 importUploadBtn.textContent = 'Upload';
@@ -2595,7 +2595,7 @@ function initTeachersPage() {
         importUploadBtn.addEventListener('click', async () => {
             const input = document.getElementById('teacherCsvFileInput');
             if (!input || !input.files || !input.files.length) {
-                alert('Please select a CSV file to upload.');
+                showToast('warning', 'No File Selected', 'Please select a CSV file to upload.');
                 return;
             }
             const file = input.files[0];
@@ -2613,7 +2613,7 @@ function initTeachersPage() {
 
                 location.reload();
             } catch (err) {
-                alert('Upload failed: ' + (err && err.message ? err.message : String(err)));
+                showLoadingError('Upload Failed', err && err.message ? err.message : String(err));
             } finally {
                 importUploadBtn.disabled = false;
                 importUploadBtn.textContent = 'Upload';
@@ -2822,27 +2822,59 @@ function initTeachersPage() {
 const uploadZones = ['teacher', 'subject', 'schedule'];
 let uploadedFiles = { teacher: false, subject: false, schedule: false };
 
+/**
+ * Compare two academic-year strings like "2024-2025".
+ * Returns < 0 if a < b, 0 if equal, > 0 if a > b.
+ */
+function compareAcademicYears(a, b) {
+    const getStart = (s) => {
+        const m = String(s).match(/^(\d{4})/);
+        return m ? parseInt(m[1], 10) : 0;
+    };
+    return getStart(a) - getStart(b);
+}
+
+/**
+ * Determine whether the entered AY is historical (before the current AY).
+ */
+function isHistoricalAY(ayValue) {
+    const currentAYEl = document.getElementById('currentAcademicYear');
+    const currentAY = currentAYEl ? currentAYEl.value : '';
+    if (!ayValue || !currentAY) return false;
+    return compareAcademicYears(ayValue, currentAY) < 0;
+}
+
 function initUploadDatasetScopeControls() {
-    const toggle = document.getElementById('uploadPreviousToggle');
     const ayInput = document.getElementById('uploadAcademicYear');
     const semSelect = document.getElementById('uploadSemester');
     const generateBtn = document.getElementById('generateBtn');
-    
-    if (!toggle || !ayInput || !semSelect) return;
+    const hint = document.getElementById('uploadModeHint');
+
+    if (!ayInput || !semSelect) return;
 
     const sync = () => {
-        const isPrev = !!toggle.checked;
-        ayInput.disabled = !isPrev;
-        semSelect.disabled = !isPrev;
+        const ayVal = ayInput.value.trim();
+        const isHistorical = isHistoricalAY(ayVal);
+        const currentAYEl = document.getElementById('currentAcademicYear');
+        const currentAY = currentAYEl ? currentAYEl.value : '';
 
-        if (!isPrev) {
-            ayInput.value = '';
-            semSelect.value = '';
+        // Update hint text
+        if (hint) {
+            if (!ayVal) {
+                hint.textContent = 'Enter an Academic Year and select Semester to begin.';
+                hint.className = 'text-xs text-slate-500';
+            } else if (isHistorical) {
+                hint.textContent = 'Historical mode — uploads are saved for forecasting and won\'t change current scheduling data.';
+                hint.className = 'text-xs text-amber-600 font-medium';
+            } else {
+                hint.textContent = 'Current mode — uploads will update live scheduling data.';
+                hint.className = 'text-xs text-green-600 font-medium';
+            }
         }
-        
+
         // Update button text based on mode
         if (generateBtn) {
-            if (isPrev) {
+            if (isHistorical && ayVal) {
                 generateBtn.innerHTML = '<i class="fas fa-history"></i> Update Historical Data';
             } else {
                 generateBtn.innerHTML = '<i class="fas fa-bolt"></i> Generate Schedule';
@@ -2850,7 +2882,8 @@ function initUploadDatasetScopeControls() {
         }
     };
 
-    toggle.addEventListener('change', sync);
+    ayInput.addEventListener('input', sync);
+    semSelect.addEventListener('change', sync);
     sync();
 }
 
@@ -2918,7 +2951,7 @@ function handleFile(type, file) {
         .catch(err => {
             // Revert UI on failure
             fileInfo.classList.add('hidden');
-            alert('Upload failed for ' + type + ': ' + err.message);
+            showLoadingError('Upload Failed', err.message);
         });
 }
 
@@ -2936,33 +2969,30 @@ async function uploadFile(file, type) {
 
     showLoadingOverlay('Uploading file...');
 
-    const previousToggle = document.getElementById('uploadPreviousToggle');
-    const datasetScope = (previousToggle && previousToggle.checked) ? 'previous' : 'current';
-
     const academicYearInput = document.getElementById('uploadAcademicYear');
     const semesterSelect = document.getElementById('uploadSemester');
     const academicYear = academicYearInput ? String(academicYearInput.value || '').trim() : '';
     const semester = semesterSelect ? String(semesterSelect.value || '').trim() : '';
 
-    if (datasetScope === 'previous') {
-        if (!academicYear) {
-            throw new Error('Please enter the Academic Year for the previous dataset (e.g., 2025-2026).');
-        }
-        if (!semester) {
-            throw new Error('Please select the Semester for the previous dataset.');
-        }
+    if (!academicYear) {
+        hideLoadingOverlay();
+        throw new Error('Please enter the Academic Year (e.g., 2025-2026).');
     }
+    if (!semester) {
+        hideLoadingOverlay();
+        throw new Error('Please select the Semester.');
+    }
+
+    // Auto-detect: if AY is before the current academic year, it's historical
+    const datasetScope = isHistoricalAY(academicYear) ? 'previous' : 'current';
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', type);
     formData.append('conflict_action', conflictAction);
     formData.append('dataset_scope', datasetScope);
-
-    if (datasetScope === 'previous') {
-        formData.append('academic_year', academicYear);
-        formData.append('semester', semester);
-    }
+    formData.append('academic_year', academicYear);
+    formData.append('semester', semester);
 
     const response = await fetch('api/upload.php', {
         method: 'POST',
@@ -2979,7 +3009,6 @@ async function uploadFile(file, type) {
     }
 
     if (!response.ok) {
-        hideLoadingOverlay();
         throw new Error((data && data.message) ? data.message : 'Upload failed.');
     }
 
@@ -3003,15 +3032,13 @@ async function uploadFile(file, type) {
             }
             
             importMsg += `\nData is now available for predictive analytics.`;
-            alert(importMsg);
-            hideLoadingOverlay();
+            showLoadingSuccess('Historical Data Imported', `AY ${data.academic_year} — ${data.semester}`);
             return data;
         }
 
         // Handle legacy saved_only response (if any)
         if (data.saved_only) {
-            alert(data.message || 'Saved as historical dataset for forecasting (not imported into current scheduling data).');
-            hideLoadingOverlay();
+            showLoadingSuccess('Saved Successfully', data.message || 'Saved as historical dataset for forecasting.');
             return data;
         }
 
@@ -3041,14 +3068,14 @@ async function uploadFile(file, type) {
             if (modal) {
                 modal.classList.remove('hidden');
             }
+            hideLoadingOverlay();
         } else {
-            alert('Successfully inserted ' + data.rows_inserted + ' rows!' + updatedMsg);
+            const rowMsg = data.rows_inserted + ' rows inserted' + (updatedMsg ? ',' + updatedMsg : '');
+            showLoadingSuccess('Upload Complete', rowMsg);
         }
-        hideLoadingOverlay();
         return data;
     }
 
-    hideLoadingOverlay();
     throw new Error(data.message || 'Upload failed.');
 }
 
@@ -3220,8 +3247,9 @@ async function updateHistoricalAnalytics() {
 // --------------------------------------------------
 async function generateSchedule() {
     // Check if this is for updating historical data or generating schedule
-    const historicalToggle = document.getElementById('uploadPreviousToggle');
-    const isHistoricalMode = historicalToggle && historicalToggle.checked;
+    const ayInput = document.getElementById('uploadAcademicYear');
+    const ayVal = ayInput ? ayInput.value.trim() : '';
+    const isHistoricalMode = isHistoricalAY(ayVal);
 
     if (isHistoricalMode) {
         // Mode: Update Historical Records for Predictive Analytics

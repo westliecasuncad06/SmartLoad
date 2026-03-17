@@ -555,21 +555,25 @@ try {
                             </div>
                         </div>
                         <div class="p-6">
+                            <?php
+                                $currentMonth = (int)date('n');
+                                $currentYear = (int)date('Y');
+                                if ($currentMonth >= 6) {
+                                    $currentAY = $currentYear . '-' . ($currentYear + 1);
+                                } else {
+                                    $currentAY = ($currentYear - 1) . '-' . $currentYear;
+                                }
+                            ?>
                             <div class="mb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-                                    <label class="flex items-center gap-2 text-sm text-slate-700 select-none">
-                                        <input type="checkbox" id="uploadPreviousToggle" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                        <span>Uploading previous AY/Sem (historical data)</span>
-                                    </label>
-
                                     <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
                                         <div class="flex items-center gap-2">
                                             <label for="uploadAcademicYear" class="text-xs text-slate-600 whitespace-nowrap">Academic Year</label>
-                                            <input id="uploadAcademicYear" type="text" placeholder="e.g., 2025-2026" disabled class="w-40 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:text-slate-500">
+                                            <input id="uploadAcademicYear" type="text" placeholder="e.g., <?= htmlspecialchars($currentAY, ENT_QUOTES, 'UTF-8') ?>" class="w-40 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <label for="uploadSemester" class="text-xs text-slate-600 whitespace-nowrap">Semester</label>
-                                            <select id="uploadSemester" disabled class="w-44 pl-3 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none bg-white disabled:bg-slate-100 disabled:text-slate-500">
+                                            <select id="uploadSemester" class="w-44 pl-3 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none bg-white">
                                                 <option value="">Select</option>
                                                 <option value="1st">1st Semester</option>
                                                 <option value="2nd">2nd Semester</option>
@@ -579,8 +583,9 @@ try {
                                     </div>
                                 </div>
 
-                                <p class="text-xs text-slate-500">Historical uploads are saved for forecasting and won’t change current scheduling data.</p>
+                                <p id="uploadModeHint" class="text-xs text-slate-500">Enter an Academic Year and select Semester to begin.</p>
                             </div>
+                            <input type="hidden" id="currentAcademicYear" value="<?= htmlspecialchars($currentAY, ENT_QUOTES, 'UTF-8') ?>">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <!-- Upload Teachers -->
                                 <div class="upload-zone border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all cursor-pointer group" id="teacherUpload">
@@ -1453,31 +1458,51 @@ try {
         </div>
     </div>
 
-    <!-- LOADING OVERLAY (visible by default via inline style; hidden after page load) -->
-    <div id="loadingOverlay" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999;background:linear-gradient(135deg,#0f172a,#1e293b);" class="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center z-[9999] backdrop-blur-sm">
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;" class="flex flex-col items-center justify-center gap-6">
-            <!-- Logo Container with Spin Animation -->
-            <div style="position:relative;width:6rem;height:6rem;display:flex;align-items:center;justify-content:center;" class="relative w-24 h-24 flex items-center justify-center">
-                <!-- Outer rotating ring -->
-                <div style="position:absolute;inset:0;border-radius:9999px;border:4px solid transparent;border-top-color:#6366f1;border-right-color:#818cf8;animation:spin 1s linear infinite;" class="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 border-r-indigo-400 animate-spin"></div>
-                
-                <!-- Inner logo -->
-                <div style="position:relative;z-index:10;background:linear-gradient(135deg,#6366f1,#4f46e5);padding:1rem;border-radius:0.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);" class="relative z-10 bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-lg shadow-2xl">
-                    <i class="fas fa-bolt" style="font-size:2.25rem;color:white;"></i>
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] backdrop-blur-sm loading-overlay-transition">
+        <div id="loadingCard" class="bg-white rounded-2xl shadow-2xl p-8 w-[340px] flex flex-col items-center gap-5 loading-card-enter">
+            <!-- Spinner state (default) -->
+            <div id="loadingSpinnerState" class="flex flex-col items-center gap-4">
+                <div class="relative w-16 h-16 flex items-center justify-center">
+                    <div class="absolute inset-0 rounded-full border-[3px] border-slate-200"></div>
+                    <div class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-indigo-500 animate-spin"></div>
+                    <i class="fas fa-cloud-arrow-up text-indigo-500 text-lg"></i>
+                </div>
+                <div class="text-center">
+                    <p id="loadingText" class="text-sm font-medium text-slate-700">Processing...</p>
+                    <p class="text-xs text-slate-400 mt-1">Please wait a moment</p>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div id="loadingProgressBar" class="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 rounded-full loading-progress-indeterminate"></div>
                 </div>
             </div>
 
-            <!-- Loading Text -->
-            <div style="text-align:center;" class="text-center">
-                <h2 style="font-size:1.5rem;font-weight:700;color:white;margin-bottom:0.5rem;font-family:'Inter',sans-serif;" class="text-2xl font-bold text-white mb-2">SmartLoad</h2>
-                <p id="loadingText" style="color:#cbd5e1;font-size:0.875rem;font-family:'Inter',sans-serif;" class="text-slate-300 text-sm">Loading...</p>
-                
-                <!-- Animated dots -->
-                <div style="display:flex;align-items:center;justify-content:center;gap:0.25rem;margin-top:0.75rem;" class="flex items-center justify-center gap-1 mt-3">
-                    <div style="width:0.5rem;height:0.5rem;background:#818cf8;border-radius:9999px;animation:bounce 1s infinite;animation-delay:0s;" class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
-                    <div style="width:0.5rem;height:0.5rem;background:#818cf8;border-radius:9999px;animation:bounce 1s infinite;animation-delay:0.15s;" class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
-                    <div style="width:0.5rem;height:0.5rem;background:#818cf8;border-radius:9999px;animation:bounce 1s infinite;animation-delay:0.3s;" class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
+            <!-- Success state (hidden by default) -->
+            <div id="loadingSuccessState" class="hidden flex flex-col items-center gap-4">
+                <div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center success-icon-pop">
+                    <i class="fas fa-circle-check text-emerald-500 text-3xl"></i>
                 </div>
+                <div class="text-center">
+                    <p id="loadingSuccessTitle" class="text-base font-semibold text-slate-800">Upload Complete</p>
+                    <p id="loadingSuccessMsg" class="text-sm text-slate-500 mt-1">25 rows inserted successfully</p>
+                </div>
+                <div class="w-full bg-emerald-100 rounded-full h-1.5">
+                    <div class="h-full bg-emerald-500 rounded-full w-full"></div>
+                </div>
+            </div>
+
+            <!-- Error state (hidden by default) -->
+            <div id="loadingErrorState" class="hidden flex flex-col items-center gap-4">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center success-icon-pop">
+                    <i class="fas fa-circle-xmark text-red-500 text-3xl"></i>
+                </div>
+                <div class="text-center">
+                    <p id="loadingErrorTitle" class="text-base font-semibold text-slate-800">Upload Failed</p>
+                    <p id="loadingErrorMsg" class="text-sm text-slate-500 mt-1">Something went wrong</p>
+                </div>
+                <button onclick="hideLoadingOverlay()" class="mt-1 px-5 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                    Dismiss
+                </button>
             </div>
         </div>
     </div>
@@ -1497,27 +1522,65 @@ try {
     
     <!-- Loading Overlay Control Script -->
     <script>
-        // Show loading overlay
+        let _loadingAutoHideTimer = null;
+
         function showLoadingOverlay(text = 'Processing...') {
             const overlay = document.getElementById('loadingOverlay');
             const loadingText = document.getElementById('loadingText');
-            if (overlay) {
-                loadingText.textContent = text;
-                overlay.style.display = '';
-                overlay.classList.remove('hidden');
-            }
+            if (!overlay) return;
+
+            // Reset to spinner state
+            document.getElementById('loadingSpinnerState').classList.remove('hidden');
+            document.getElementById('loadingSuccessState').classList.add('hidden');
+            document.getElementById('loadingErrorState').classList.add('hidden');
+
+            if (loadingText) loadingText.textContent = text;
+
+            if (_loadingAutoHideTimer) { clearTimeout(_loadingAutoHideTimer); _loadingAutoHideTimer = null; }
+
+            overlay.classList.remove('hidden');
+            overlay.offsetHeight; // force reflow
+            overlay.classList.add('loading-overlay-visible');
         }
 
-        // Hide loading overlay
+        function showLoadingSuccess(title = 'Upload Complete', message = '') {
+            const overlay = document.getElementById('loadingOverlay');
+            if (!overlay || overlay.classList.contains('hidden')) return;
+
+            document.getElementById('loadingSpinnerState').classList.add('hidden');
+            document.getElementById('loadingErrorState').classList.add('hidden');
+
+            const successState = document.getElementById('loadingSuccessState');
+            document.getElementById('loadingSuccessTitle').textContent = title;
+            document.getElementById('loadingSuccessMsg').textContent = message;
+            successState.classList.remove('hidden');
+
+            // Auto-close after a short delay
+            _loadingAutoHideTimer = setTimeout(() => hideLoadingOverlay(), 1500);
+        }
+
+        function showLoadingError(title = 'Upload Failed', message = '') {
+            const overlay = document.getElementById('loadingOverlay');
+            if (!overlay || overlay.classList.contains('hidden')) return;
+
+            document.getElementById('loadingSpinnerState').classList.add('hidden');
+            document.getElementById('loadingSuccessState').classList.add('hidden');
+
+            const errorState = document.getElementById('loadingErrorState');
+            document.getElementById('loadingErrorTitle').textContent = title;
+            document.getElementById('loadingErrorMsg').textContent = message;
+            errorState.classList.remove('hidden');
+        }
+
         function hideLoadingOverlay() {
             const overlay = document.getElementById('loadingOverlay');
-            if (overlay) {
-                overlay.style.display = 'none';
-                overlay.classList.add('hidden');
-            }
+            if (!overlay) return;
+            if (_loadingAutoHideTimer) { clearTimeout(_loadingAutoHideTimer); _loadingAutoHideTimer = null; }
+            overlay.classList.remove('loading-overlay-visible');
+            setTimeout(() => { overlay.classList.add('hidden'); }, 250);
         }
 
-        // Hide loading overlay and show app when page fully loads
+        // Hide on page load
         window.addEventListener('load', function() {
             var app = document.getElementById('appWrapper');
             if (app) app.style.display = '';
