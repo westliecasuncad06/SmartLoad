@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/db.php';
 
 // Fetch dashboard stats from database
@@ -350,11 +350,11 @@ try {
                                     <div class="flex gap-4">
                                         <div>
                                             <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Requests Made</label>
-                                            <p id="apiTotalRequests" class="text-sm font-semibold text-slate-800 mt-0.5">—</p>
+                                            <p id="apiTotalRequests" class="text-sm font-semibold text-slate-800 mt-0.5">â€”</p>
                                         </div>
                                         <div>
                                             <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Last Used</label>
-                                            <p id="apiLastUsed" class="text-sm text-slate-700 mt-0.5">—</p>
+                                            <p id="apiLastUsed" class="text-sm text-slate-700 mt-0.5">â€”</p>
                                         </div>
                                     </div>
                                 </div>
@@ -707,7 +707,7 @@ try {
                         <div class="px-4 sm:px-6 py-3 bg-indigo-700/50 flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-indigo-100">
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-scale-balanced"></i>
-                                <span>Priority: <strong class="text-white">Expertise (<?= (int)$policyExpertiseWeight ?>%) → Availability (<?= (int)$policyAvailWeight ?>%)</strong></span>
+                                <span>Priority: <strong class="text-white">Expertise (<?= (int)$policyExpertiseWeight ?>%) â†’ Availability (<?= (int)$policyAvailWeight ?>%)</strong></span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-weight-scale"></i>
@@ -726,7 +726,7 @@ try {
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div class="flex flex-wrap items-center gap-3">
                                     <h3 class="text-lg font-semibold text-slate-900">Load Assignment Report</h3>
-                                    <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium"><?php echo (int)$totalTeachers; ?> Teachers • <?php echo (int)$totalSubjects; ?> Subjects</span>
+                                    <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium"><?php echo (int)$totalTeachers; ?> Teachers â€¢ <?php echo (int)$totalSubjects; ?> Subjects</span>
                                 </div>
                                 <div class="flex items-center gap-3">
                                     <div class="relative">
@@ -747,6 +747,9 @@ try {
                                             <i class="fas fa-file-pdf text-red-600"></i> PDF
                                         </button>
                                     </div>
+                                    <button id="btnSendAllPdf" type="button" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
+                                        <i class="fas fa-paper-plane"></i> Send All to Email
+                                    </button>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 mt-3">
@@ -895,7 +898,7 @@ try {
                                                     foreach (array_slice(explode(',', $ta['expertise_tags']), 0, 3) as $tag): ?>
                                                     <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs"><?= htmlspecialchars(trim($tag)) ?></span>
                                                 <?php endforeach; else: ?>
-                                                    <span class="text-slate-400 text-xs">—</span>
+                                                    <span class="text-slate-400 text-xs">â€”</span>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
@@ -914,7 +917,7 @@ try {
                                                     <p><?= htmlspecialchars($line) ?></p>
                                                     <?php endforeach;
                                                     if (empty($schedLines)): ?>
-                                                    <p class="text-slate-400">—</p>
+                                                    <p class="text-slate-400">â€”</p>
                                                     <?php endif; ?>
                                                 <?php endforeach; ?>
                                             </div>
@@ -969,7 +972,7 @@ try {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4"><span class="text-slate-400 text-xs">—</span></td>
+                                        <td class="px-6 py-4"><span class="text-slate-400 text-xs">â€”</span></td>
                                         <td class="px-6 py-4">
                                             <div class="space-y-1">
                                                 <p class="text-slate-900 font-medium"><?= htmlspecialchars($us['course_code'] . ' - ' . $us['name']) ?></p>
@@ -981,7 +984,7 @@ try {
                                         <td class="px-6 py-4 text-slate-700">
                                             <div class="space-y-1 text-xs">
                                                 <?php foreach ($uSchedLines as $line): ?><p><?= htmlspecialchars($line) ?></p><?php endforeach; ?>
-                                                <?php if (empty($uSchedLines)): ?><p class="text-slate-400">—</p><?php endif; ?>
+                                                <?php if (empty($uSchedLines)): ?><p class="text-slate-400">â€”</p><?php endif; ?>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
@@ -1103,8 +1106,8 @@ try {
                             <div class="px-6 py-3.5 flex items-start gap-4 hover:bg-slate-50 transition-colors">
                                 <div class="w-8 h-8 <?= $iconBg ?> rounded-full flex items-center justify-center flex-shrink-0"><i class="<?= $iconClass ?> text-xs"></i></div>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm text-slate-900 truncate"><span class="font-medium"><?= htmlspecialchars($actionType) ?></span> — <?= htmlspecialchars(mb_strimwidth($logDesc, 0, 100, '...')) ?></p>
-                                    <p class="text-xs text-slate-500 mt-0.5"><?= htmlspecialchars($logTime) ?> • By: <?= htmlspecialchars($logUser) ?></p>
+                                    <p class="text-sm text-slate-900 truncate"><span class="font-medium"><?= htmlspecialchars($actionType) ?></span> â€” <?= htmlspecialchars(mb_strimwidth($logDesc, 0, 100, '...')) ?></p>
+                                    <p class="text-xs text-slate-500 mt-0.5"><?= htmlspecialchars($logTime) ?> â€¢ By: <?= htmlspecialchars($logUser) ?></p>
                                 </div>
                             </div>
                             <?php endforeach; ?>
@@ -1161,7 +1164,7 @@ try {
                         <?php
                         $teacherStmt = $pdo->query("SELECT id, name, current_units, max_units, expertise_tags FROM teachers ORDER BY name ASC");
                         while ($t = $teacherStmt->fetch(PDO::FETCH_ASSOC)):
-                            $overloaded = $t['current_units'] >= $t['max_units'] ? ' ⚠️ OVERLOADED' : '';
+                            $overloaded = $t['current_units'] >= $t['max_units'] ? ' âš ï¸ OVERLOADED' : '';
                             $expertise = $t['expertise_tags'] ? htmlspecialchars($t['expertise_tags'], ENT_QUOTES, 'UTF-8') : 'N/A';
                             $label = htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8')
                                    . ' (' . (int)$t['current_units'] . '/' . (int)$t['max_units'] . ' units)'
@@ -1209,13 +1212,13 @@ try {
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="md:col-span-2">
                         <p class="text-xs text-slate-400">Teacher</p>
-                        <p id="dashTeacherName" class="text-sm font-semibold text-slate-900">—</p>
-                        <p id="dashTeacherEmail" class="text-xs text-slate-500">—</p>
+                        <p id="dashTeacherName" class="text-sm font-semibold text-slate-900">â€”</p>
+                        <p id="dashTeacherEmail" class="text-xs text-slate-500">â€”</p>
                     </div>
                     <div>
                         <p class="text-xs text-slate-400">Load</p>
-                        <p class="text-sm text-slate-900"><span id="dashTeacherUnits" class="font-semibold">—</span></p>
-                        <p id="dashTeacherType" class="text-xs text-slate-500">—</p>
+                        <p class="text-sm text-slate-900"><span id="dashTeacherUnits" class="font-semibold">â€”</span></p>
+                        <p id="dashTeacherType" class="text-xs text-slate-500">â€”</p>
                     </div>
                 </div>
 
@@ -1239,6 +1242,60 @@ try {
             <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end bg-slate-50 rounded-b-xl">
                 <button type="button" id="btnDashboardTeacherLoadCancel" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Close</button>
                 <button type="button" id="btnDashboardTeacherSendPdf" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2"><i class="fas fa-paper-plane"></i> Send PDF to Email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SEND ALL PDF TO EMAIL -->
+    <div id="sendAllModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Send PDF to All Teachers</h2>
+                    <p class="text-sm text-slate-500 mt-0.5">Email load reports to all assigned teachers</p>
+                </div>
+                <button type="button" id="btnSendAllClose" class="text-slate-400 hover:text-slate-600 p-1"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <!-- Pre-send info -->
+                <div id="sendAllInfo">
+                    <div class="flex items-center gap-3 p-4 bg-indigo-50 rounded-lg">
+                        <i class="fas fa-envelope-open-text text-indigo-600 text-xl"></i>
+                        <div>
+                            <p class="text-sm font-medium text-slate-900">Ready to send</p>
+                            <p class="text-xs text-slate-500">This will generate and email a PDF load report to each teacher who has assignments and a valid email address.</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center gap-2 text-sm text-slate-600">
+                        <i class="fas fa-users text-slate-400"></i>
+                        <span id="sendAllTeacherCount">Loading...</span>
+                    </div>
+                </div>
+                <!-- Progress section -->
+                <div id="sendAllProgress" class="hidden space-y-3">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-slate-600">Sending emails...</span>
+                        <span id="sendAllProgressText" class="font-medium text-indigo-600">0 / 0</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                        <div id="sendAllProgressBar" class="bg-indigo-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <div id="sendAllLog" class="max-h-40 overflow-y-auto space-y-1 text-xs font-mono bg-slate-50 rounded-lg p-3"></div>
+                </div>
+                <!-- Done section -->
+                <div id="sendAllDone" class="hidden">
+                    <div class="text-center py-4">
+                        <div id="sendAllDoneIcon" class="w-14 h-14 mx-auto mb-3 bg-green-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-check text-green-600 text-2xl"></i>
+                        </div>
+                        <p id="sendAllDoneTitle" class="text-lg font-semibold text-slate-900">All Done!</p>
+                        <p id="sendAllDoneSummary" class="text-sm text-slate-500 mt-1"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end bg-slate-50 rounded-b-xl">
+                <button type="button" id="btnSendAllCancel" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Cancel</button>
+                <button type="button" id="btnSendAllConfirm" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2"><i class="fas fa-paper-plane"></i> Send All</button>
             </div>
         </div>
     </div>
@@ -1307,7 +1364,7 @@ try {
                                 <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center"><i class="fas fa-check text-green-600"></i></div>
                                 <div>
                                     <p class="font-medium text-slate-900">Schedule v1.3 <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-2">Current</span></p>
-                                    <p class="text-xs text-slate-500">Today at 2:45 PM • 156 subjects • 0 conflicts</p>
+                                    <p class="text-xs text-slate-500">Today at 2:45 PM â€¢ 156 subjects â€¢ 0 conflicts</p>
                                 </div>
                             </div>
                             <button class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">View</button>
@@ -1319,7 +1376,7 @@ try {
                                 <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center"><i class="fas fa-clock-rotate-left text-slate-400"></i></div>
                                 <div>
                                     <p class="font-medium text-slate-900">Schedule v1.2</p>
-                                    <p class="text-xs text-slate-500">Yesterday at 4:30 PM • 152 subjects • 2 conflicts</p>
+                                    <p class="text-xs text-slate-500">Yesterday at 4:30 PM â€¢ 152 subjects â€¢ 2 conflicts</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
@@ -1334,7 +1391,7 @@ try {
                                 <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center"><i class="fas fa-clock-rotate-left text-slate-400"></i></div>
                                 <div>
                                     <p class="font-medium text-slate-900">Schedule v1.1</p>
-                                    <p class="text-xs text-slate-500">Mar 14, 2026 at 10:15 AM • 148 subjects • 5 conflicts</p>
+                                    <p class="text-xs text-slate-500">Mar 14, 2026 at 10:15 AM â€¢ 148 subjects â€¢ 5 conflicts</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
@@ -1388,7 +1445,7 @@ try {
                     </div>
                 </div>
 
-                <p class="text-xs text-slate-500 mt-3">Tip: Choose “Update Existing” to apply the uploaded values for duplicate keys.</p>
+                <p class="text-xs text-slate-500 mt-3">Tip: Choose â€œUpdate Existingâ€ to apply the uploaded values for duplicate keys.</p>
             </div>
 
             <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end bg-slate-50 rounded-b-xl">

@@ -1473,19 +1473,20 @@ function initDashboardReport() {
             if (!teacherId) return;
 
             sendBtn.disabled = true;
-            const prev = sendBtn.textContent;
-            sendBtn.textContent = 'Sending...';
+            const prevHtml = sendBtn.innerHTML;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
             try {
                 const data = await postJson('api/send_teacher_load_pdf.php', { teacher_id: teacherId });
                 if (!data || data.status !== 'success') {
                     throw new Error((data && data.message) ? data.message : 'Failed to send PDF.');
                 }
-                alert('PDF sent successfully.');
+                sendBtn.innerHTML = '<i class="fas fa-check"></i> Sent!';
+                setTimeout(() => { sendBtn.innerHTML = prevHtml; }, 2000);
             } catch (err) {
                 alert('Send failed: ' + (err && err.message ? err.message : String(err)));
+                sendBtn.innerHTML = prevHtml;
             } finally {
                 sendBtn.disabled = false;
-                sendBtn.textContent = prev;
             }
         });
     }
@@ -1544,6 +1545,150 @@ function initDashboardReport() {
             alert('Failed to load details: ' + (err && err.message ? err.message : String(err)));
         }
     });
+}
+
+// --------------------------------------------------
+// Send All PDF to Email
+// --------------------------------------------------
+function initSendAllPdf() {
+    const btnSendAll = document.getElementById('btnSendAllPdf');
+    const modal = document.getElementById('sendAllModal');
+    const btnClose = document.getElementById('btnSendAllClose');
+    const btnCancel = document.getElementById('btnSendAllCancel');
+    const btnConfirm = document.getElementById('btnSendAllConfirm');
+    const infoSection = document.getElementById('sendAllInfo');
+    const progressSection = document.getElementById('sendAllProgress');
+    const doneSection = document.getElementById('sendAllDone');
+    const progressBar = document.getElementById('sendAllProgressBar');
+    const progressText = document.getElementById('sendAllProgressText');
+    const logEl = document.getElementById('sendAllLog');
+    const countEl = document.getElementById('sendAllTeacherCount');
+    const doneSummary = document.getElementById('sendAllDoneSummary');
+    const doneTitle = document.getElementById('sendAllDoneTitle');
+    const doneIcon = document.getElementById('sendAllDoneIcon');
+
+    if (!btnSendAll || !modal) return;
+
+    let teacherList = [];
+    let isSending = false;
+
+    function resetModal() {
+        infoSection.classList.remove('hidden');
+        progressSection.classList.add('hidden');
+        doneSection.classList.add('hidden');
+        btnConfirm.classList.remove('hidden');
+        btnConfirm.disabled = false;
+        btnCancel.textContent = 'Cancel';
+        progressBar.style.width = '0%';
+        logEl.innerHTML = '';
+        isSending = false;
+    }
+
+    function openModal() {
+        resetModal();
+        modal.classList.remove('hidden');
+        countEl.textContent = 'Loading teacher list...';
+        btnConfirm.disabled = true;
+
+        fetch('api/send_all_teacher_pdf.php')
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    teacherList = data.teachers || [];
+                    const count = teacherList.length;
+                    if (count === 0) {
+                        countEl.textContent = 'No teachers with assignments and email found.';
+                    } else {
+                        countEl.textContent = count + ' teacher' + (count > 1 ? 's' : '') + ' will receive their load report via email.';
+                        btnConfirm.disabled = false;
+                    }
+                } else {
+                    countEl.textContent = 'Failed to load teachers.';
+                }
+            })
+            .catch(() => {
+                countEl.textContent = 'Error loading teacher list.';
+            });
+    }
+
+    function closeModal() {
+        if (isSending) {
+            if (!confirm('Emails are still being sent. Are you sure you want to close?')) return;
+        }
+        modal.classList.add('hidden');
+        isSending = false;
+    }
+
+    function addLog(message, isError) {
+        const line = document.createElement('div');
+        line.className = isError ? 'text-red-600' : 'text-green-700';
+        line.textContent = message;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function sendAll() {
+        if (teacherList.length === 0) return;
+
+        isSending = true;
+        btnConfirm.classList.add('hidden');
+        infoSection.classList.add('hidden');
+        progressSection.classList.remove('hidden');
+
+        const total = teacherList.length;
+        let sent = 0;
+        let failed = 0;
+
+        for (let i = 0; i < total; i++) {
+            const teacher = teacherList[i];
+            progressText.textContent = (i + 1) + ' / ' + total;
+            progressBar.style.width = Math.round(((i + 1) / total) * 100) + '%';
+
+            try {
+                const data = await postJson('api/send_all_teacher_pdf.php', { teacher_id: teacher.id });
+                if (data && data.status === 'success') {
+                    sent++;
+                    addLog('✓ Sent to ' + teacher.name + ' (' + teacher.email + ')', false);
+                } else {
+                    failed++;
+                    addLog('✗ Failed: ' + teacher.name + ' — ' + ((data && data.message) || 'Unknown error'), true);
+                }
+            } catch (err) {
+                failed++;
+                addLog('✗ Failed: ' + teacher.name + ' — ' + (err.message || String(err)), true);
+            }
+        }
+
+        isSending = false;
+        progressSection.classList.add('hidden');
+        doneSection.classList.remove('hidden');
+        btnCancel.textContent = 'Close';
+
+        if (failed === 0) {
+            doneTitle.textContent = 'All Done!';
+            doneSummary.textContent = 'Successfully sent ' + sent + ' email' + (sent > 1 ? 's' : '') + '.';
+            doneIcon.className = 'w-14 h-14 mx-auto mb-3 bg-green-100 rounded-full flex items-center justify-center';
+            doneIcon.innerHTML = '<i class="fas fa-check text-green-600 text-2xl"></i>';
+        } else {
+            doneTitle.textContent = 'Completed with errors';
+            doneSummary.textContent = sent + ' sent, ' + failed + ' failed out of ' + total + ' teachers.';
+            doneIcon.className = 'w-14 h-14 mx-auto mb-3 bg-amber-100 rounded-full flex items-center justify-center';
+            doneIcon.innerHTML = '<i class="fas fa-exclamation-triangle text-amber-600 text-2xl"></i>';
+        }
+    }
+
+    btnSendAll.addEventListener('click', openModal);
+    btnClose.addEventListener('click', closeModal);
+    btnCancel.addEventListener('click', closeModal);
+    btnConfirm.addEventListener('click', sendAll);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+}
+
+// Initialize Send All on DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSendAllPdf);
+} else {
+    initSendAllPdf();
 }
 
 // --------------------------------------------------
