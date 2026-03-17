@@ -926,7 +926,9 @@ function initPredictiveHrInsights() {
             return;
         }
 
-        const cards = shortages.map((row) => {
+        const batchId = String(Date.now());
+
+        const cards = shortages.map((row, index) => {
             const subjectName = row.subject_name || 'Unknown Subject';
             const projectedUnits = Number(row.projected_units_needed || 0);
             const totalCapacity = Number(row.total_faculty_capacity || 0);
@@ -942,17 +944,79 @@ function initPredictiveHrInsights() {
 
             const message = `Shortage Risk: ${subjectName}. Projected demand is ${projectedUnits} units, but current specialized faculty capacity is only ${totalCapacity} units. Shortfall: ${unitShortage} units.`;
 
+            const cardId = 'hrShortage-' + batchId + '-' + String(index);
+            const aiElId = 'aiRec-' + batchId + '-' + String(index);
+            const badgeId = 'aiBadge-' + batchId + '-' + String(index);
+
             return (
-                '<div class="bg-rose-50 border border-rose-200 rounded-lg p-4 text-rose-900">'
+                '<div class="bg-rose-50 border border-rose-200 rounded-lg p-4 text-rose-900" id="' + escapeHtml(cardId) + '">'
                 + '  <div class="flex items-start justify-between gap-3">'
                 + '    <p class="text-sm leading-relaxed">' + escapeHtml(message) + '</p>'
-                + '    <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">Recommended Action: ' + escapeHtml(recommendedAction) + '</span>'
+                + '    <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200" id="' + escapeHtml(badgeId) + '">Recommended Action: ' + escapeHtml(recommendedAction) + '</span>'
                 + '  </div>'
+                + '  <div class="mt-2 text-sm" id="' + escapeHtml(aiElId) + '">AI Suggestion: Loading…</div>'
                 + '</div>'
             );
         }).join('');
 
         container.innerHTML = cards;
+
+        // Fetch AI recommendations (best-effort) and update cards in place.
+        shortages.forEach((row, index) => {
+            const subjectName = String(row && row.subject_name ? row.subject_name : 'Unknown Subject');
+            const projectedUnits = Number(row && row.projected_units_needed != null ? row.projected_units_needed : 0);
+            const totalCapacity = Number(row && row.total_faculty_capacity != null ? row.total_faculty_capacity : 0);
+            const historyArr = Array.isArray(row && row.history ? row.history : null) ? row.history : [];
+            const historyString = historyArr.length ? historyArr.map(v => Number(v) || 0).join(', ') : 'N/A';
+
+            const aiElId = 'aiRec-' + batchId + '-' + String(index);
+            const badgeId = 'aiBadge-' + batchId + '-' + String(index);
+            const aiEl = document.getElementById(aiElId);
+            const badgeEl = document.getElementById(badgeId);
+            if (!aiEl) return;
+
+            const url = new URL('api/hiring_recommendation.php', window.location.href);
+            url.searchParams.set('subject_name', subjectName);
+            url.searchParams.set('history_string', historyString);
+            url.searchParams.set('projected_units', String(projectedUnits));
+            url.searchParams.set('total_capacity', String(totalCapacity));
+
+            fetch(url.toString(), { method: 'GET', cache: 'no-store' })
+                .then(async (res) => {
+                    const data = await res.json().catch(() => null);
+                    if (!res.ok || !data) {
+                        throw new Error((data && data.message) ? data.message : 'AI suggestion unavailable');
+                    }
+                    return data;
+                })
+                .then((ai) => {
+                    const risk = String(ai.risk_level || 'Medium');
+                    const rec = String(ai.hr_recommendation || '').trim();
+                    const warn = String(ai.impact_warning || '').trim();
+                    const shortfall = Number(ai.shortfall_units || 0);
+
+                    const parts = [];
+                    if (rec) parts.push(rec);
+                    if (warn) parts.push(warn);
+
+                    aiEl.textContent = 'AI Suggestion: ' + (parts.join(' ') || 'No recommendation returned.');
+
+                    if (badgeEl) {
+                        badgeEl.textContent = 'Risk: ' + risk + ' • Shortfall: ' + String(shortfall) + ' units';
+                        badgeEl.classList.remove('bg-amber-100', 'text-amber-700', 'border-amber-200');
+                        if (risk.toLowerCase() === 'critical') {
+                            badgeEl.classList.add('bg-red-100', 'text-red-700', 'border-red-200');
+                        } else if (risk.toLowerCase() === 'low') {
+                            badgeEl.classList.add('bg-green-100', 'text-green-700', 'border-green-200');
+                        } else {
+                            badgeEl.classList.add('bg-amber-100', 'text-amber-700', 'border-amber-200');
+                        }
+                    }
+                })
+                .catch((err) => {
+                    aiEl.textContent = 'AI Suggestion: ' + (err && err.message ? err.message : 'Unavailable');
+                });
+        });
     };
 
     setStatus('Loading forecast…');

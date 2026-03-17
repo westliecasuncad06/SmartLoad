@@ -210,4 +210,183 @@ PROMPT;
             'rationale' => (string) $result['rationale'],
         ];
     }
+
+    /**
+     * Provide a strategic hiring recommendation for a subject based on projected units vs capacity.
+     *
+     * @return array{shortfall_units:int, risk_level:string, hr_recommendation:string, impact_warning:string}
+     */
+    public function hiringRecommendation(
+        string $subjectName,
+        string $historyString,
+        int $projectedUnits,
+        int $totalCapacity
+    ): array {
+        $shortfall = $projectedUnits - $totalCapacity;
+        if ($shortfall <= 0) {
+            return [
+                'shortfall_units' => 0,
+                'risk_level' => 'Low',
+                'hr_recommendation' => 'No additional instructor hiring is required for this subject based on the current projection.',
+                'impact_warning' => 'No projected capacity shortfall; continue monitoring demand to avoid unexpected enrollment constraints.',
+            ];
+        }
+
+        if (!$this->isEnabled()) {
+            $risk = $shortfall >= 12 ? 'Critical' : 'Medium';
+            $hireType = $shortfall >= 12 ? '1 Full-Time instructor' : '1 Part-Time instructor';
+
+            return [
+                'shortfall_units' => (int) $shortfall,
+                'risk_level' => $risk,
+                'hr_recommendation' => 'Hire ' . $hireType . ' specialized for ' . trim($subjectName) . ' to cover the projected unit shortfall.',
+                'impact_warning' => 'If unaddressed, faculty overload or blocked enrollments may delay student progression and reduce course completion rates.',
+            ];
+        }
+
+        $subjectNameEscaped = trim($subjectName);
+        $historyEscaped = trim($historyString);
+
+        $prompt = <<<PROMPT
+You are an Expert University HR Planner and Data Analyst.
+Analyze the following faculty workload projection and provide a strategic hiring recommendation.
+
+DATA FOR ANALYSIS:
+- Subject: {$subjectNameEscaped}
+- Historical Sections Offered (Past 3 Years): {$historyEscaped}
+- Projected Units Needed Next Year: {$projectedUnits}
+- Current Specialized Faculty Capacity: {$totalCapacity} units
+
+YOUR TASK:
+Calculate the shortfall (Projected - Capacity). If there is a shortfall, assess the business risk and provide a specific hiring recommendation.
+
+CRITICAL IMPORTANCE FACTORS TO CONSIDER:
+1. Distinguish between needing a Part-Time instructor (usually 3-9 units) vs a Full-Time instructor (12+ units).
+2. Consider the impact of overloaded teachers or students being unable to enroll in required classes.
+
+OUTPUT FORMAT:
+You must return your analysis in STRICT, valid JSON format. Do not include markdown formatting or code blocks. Use this exact structure:
+{
+    "shortfall_units": <integer>,
+    "risk_level": "<Low | Medium | Critical>",
+    "hr_recommendation": "<1 clear, direct sentence on exactly who to hire>",
+    "impact_warning": "<1 sentence explaining the negative impact to the university if this shortage is ignored>"
+}
+PROMPT;
+
+        $payload = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt],
+                    ],
+                ],
+            ],
+            'generationConfig' => [
+                'temperature' => 0.0,
+                'maxOutputTokens' => 256,
+                // Best-effort hint: if supported by the API/model, this encourages JSON output.
+                'responseMimeType' => 'application/json',
+            ],
+        ];
+
+        $url = $this->endpoint . '?key=' . urlencode($this->apiKey);
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return [
+                'shortfall_units' => (int) $shortfall,
+                'risk_level' => 'Medium',
+                'hr_recommendation' => 'Hire 1 Part-Time instructor specialized for ' . $subjectNameEscaped . ' to cover the projected shortfall.',
+                'impact_warning' => 'If ignored, course offerings may be reduced and students may be blocked from required classes.',
+            ];
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS     => json_encode($payload),
+            CURLOPT_CONNECTTIMEOUT => 8,
+            CURLOPT_TIMEOUT        => 20,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false || $httpCode !== 200) {
+            $risk = $shortfall >= 12 ? 'Critical' : 'Medium';
+            $hireType = $shortfall >= 12 ? '1 Full-Time instructor' : '1 Part-Time instructor';
+            $warning = $response === false
+                ? ('AI request failed: ' . $curlError)
+                : ('AI returned HTTP ' . $httpCode);
+
+            return [
+                'shortfall_units' => (int) $shortfall,
+                'risk_level' => $risk,
+                'hr_recommendation' => 'Hire ' . $hireType . ' specialized for ' . $subjectNameEscaped . ' to cover the projected unit shortfall.',
+                'impact_warning' => 'AI unavailable (' . $warning . '); if ignored, overloads or blocked enrollments may occur due to insufficient capacity.',
+            ];
+        }
+
+        $body = json_decode($response, true);
+        if (!isset($body['candidates'][0]['content']['parts'][0]['text'])) {
+            return [
+                'shortfall_units' => (int) $shortfall,
+                'risk_level' => 'Medium',
+                'hr_recommendation' => 'Hire 1 Part-Time instructor specialized for ' . $subjectNameEscaped . ' to cover the projected shortfall.',
+                'impact_warning' => 'Unexpected AI response format; if ignored, insufficient staffing may restrict course offerings and student enrollment.',
+            ];
+        }
+
+        $text = trim((string) $body['candidates'][0]['content']['parts'][0]['text']);
+        $text = preg_replace('/^```(?:json)?\s*/i', '', $text);
+        $text = preg_replace('/\s*```$/i', '', $text);
+
+        // If extra text is present, attempt to extract the first JSON object.
+        $start = strpos($text, '{');
+        $end = strrpos($text, '}');
+        if ($start !== false && $end !== false && $end > $start) {
+            $text = substr($text, $start, $end - $start + 1);
+        }
+
+        $result = json_decode($text, true);
+        if (!is_array($result)) {
+            return [
+                'shortfall_units' => (int) $shortfall,
+                'risk_level' => $shortfall >= 12 ? 'Critical' : 'Medium',
+                'hr_recommendation' => 'Hire ' . ($shortfall >= 12 ? '1 Full-Time instructor' : '1 Part-Time instructor') . ' specialized for ' . $subjectNameEscaped . ' to cover the projected unit shortfall.',
+                'impact_warning' => 'Failed to parse AI JSON; if ignored, student enrollment may be constrained and faculty may be overloaded.',
+            ];
+        }
+
+        $outShortfall = isset($result['shortfall_units']) ? (int) $result['shortfall_units'] : (int) $shortfall;
+        if ($outShortfall < 0) {
+            $outShortfall = 0;
+        }
+
+        $riskLevel = (string) ($result['risk_level'] ?? 'Medium');
+        $riskLevelNorm = ucfirst(strtolower(trim($riskLevel)));
+        if (!in_array($riskLevelNorm, ['Low', 'Medium', 'Critical'], true)) {
+            $riskLevelNorm = $outShortfall >= 12 ? 'Critical' : 'Medium';
+        }
+
+        $hrRecommendation = trim((string) ($result['hr_recommendation'] ?? ''));
+        if ($hrRecommendation === '') {
+            $hrRecommendation = 'Hire ' . ($outShortfall >= 12 ? '1 Full-Time instructor' : '1 Part-Time instructor') . ' specialized for ' . $subjectNameEscaped . ' to cover the projected unit shortfall.';
+        }
+
+        $impactWarning = trim((string) ($result['impact_warning'] ?? ''));
+        if ($impactWarning === '') {
+            $impactWarning = 'If ignored, course sections may be reduced, increasing overload risk and preventing students from enrolling in required classes.';
+        }
+
+        return [
+            'shortfall_units' => (int) $outShortfall,
+            'risk_level' => $riskLevelNorm,
+            'hr_recommendation' => $hrRecommendation,
+            'impact_warning' => $impactWarning,
+        ];
+    }
 }

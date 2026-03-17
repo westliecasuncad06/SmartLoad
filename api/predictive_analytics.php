@@ -208,6 +208,242 @@ function predictTeacherShortage() {
  */
 function updateHistoricalAnalytics() {
     global $pdo;
+
+    $stopWords = [
+        'and', 'or', 'the', 'of', 'to', 'in', 'for', 'on', 'with', 'a', 'an', 'is', 'ii', 'iii',
+        'bs', 'ba', 'bsc', 'information', 'technology', 'computer', 'science',
+    ];
+
+    $tokenize = static function (string $text) use ($stopWords): array {
+        $text = strtolower($text);
+        $text = preg_replace('/[^a-z0-9\s]+/', ' ', $text);
+        $parts = preg_split('/\s+/', trim($text)) ?: [];
+        $tokens = [];
+        foreach ($parts as $p) {
+            $p = trim((string) $p);
+            if ($p === '' || strlen($p) <= 2) {
+                continue;
+            }
+            if (in_array($p, $stopWords, true)) {
+                continue;
+            }
+            $tokens[] = $p;
+        }
+        return array_values(array_unique($tokens));
+    };
+
+    $listPeriods = static function () use ($pdo): array {
+        $rows = $pdo->query(
+            'SELECT DISTINCT academic_year, semester FROM (
+                SELECT academic_year, semester FROM historical_teachers
+                UNION ALL
+                SELECT academic_year, semester FROM historical_subjects
+                UNION ALL
+                SELECT academic_year, semester FROM historical_schedules
+            ) x
+            WHERE academic_year IS NOT NULL AND academic_year <> ""
+              AND semester IS NOT NULL AND semester <> ""
+            ORDER BY academic_year DESC, semester DESC'
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $periods = [];
+        foreach ($rows as $r) {
+            $ay = (string) ($r['academic_year'] ?? '');
+            $sem = (string) ($r['semester'] ?? '');
+            if ($ay === '' || $sem === '') {
+                continue;
+            }
+            $periods[] = ['academic_year' => $ay, 'semester' => $sem];
+        }
+        return $periods;
+    };
+
+    $upsertMetadataForPeriod = static function (string $academicYear, string $semester) use ($pdo): array {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM historical_teachers WHERE academic_year = ? AND semester = ?');
+        $stmt->execute([$academicYear, $semester]);
+        $totalTeachers = (int) $stmt->fetchColumn();
+
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM historical_subjects WHERE academic_year = ? AND semester = ?');
+        $stmt->execute([$academicYear, $semester]);
+        $totalSubjects = (int) $stmt->fetchColumn();
+
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM historical_assignments WHERE academic_year = ? AND semester = ?');
+        $stmt->execute([$academicYear, $semester]);
+        $totalAssignments = (int) $stmt->fetchColumn();
+
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM historical_schedules WHERE academic_year = ? AND semester = ?');
+        $stmt->execute([$academicYear, $semester]);
+        $totalSchedules = (int) $stmt->fetchColumn();
+
+        $notes = sprintf(
+            'Refreshed on %s (teachers=%d, subjects=%d, schedules=%d, assignments=%d)',
+            date('Y-m-d H:i:s'),
+            $totalTeachers,
+            $totalSubjects,
+            $totalSchedules,
+            $totalAssignments
+        );
+
+        $up = $pdo->prepare(
+            'INSERT INTO historical_analytics_metadata (academic_year, semester, total_teachers, total_subjects, total_assignments, notes)\n'
+            . 'VALUES (?, ?, ?, ?, ?, ?)\n'
+            . 'ON DUPLICATE KEY UPDATE\n'
+            . '  import_date = CURRENT_TIMESTAMP,\n'
+            . '  total_teachers = VALUES(total_teachers),\n'
+            . '  total_subjects = VALUES(total_subjects),\n'
+            . '  total_assignments = VALUES(total_assignments),\n'
+            . '  notes = VALUES(notes)'
+        );
+        $up->execute([$academicYear, $semester, $totalTeachers, $totalSubjects, $totalAssignments, $notes]);
+
+        return [
+            'total_teachers' => $totalTeachers,
+            'total_subjects' => $totalSubjects,
+            'total_schedules' => $totalSchedules,
+            'total_assignments' => $totalAssignments,
+        ];
+    };
+
+    $generateSyntheticAssignmentsForPeriod = static function (string $academicYear, string $semester) use ($pdo, $tokenize): int {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM historical_assignments WHERE academic_year = ? AND semester = ?');
+        $stmt->execute([$academicYear, $semester]);
+        if (((int) $stmt->fetchColumn()) > 0) {
+            return 0;
+        }
+
+        $teachers = $pdo->prepare(
+            'SELECT id, name, email, type, max_units, expertise_tags\n'
+            . 'FROM historical_teachers\n'
+            . 'WHERE academic_year = ? AND semester = ?\n'
+            . 'ORDER BY id ASC'
+        );
+        $teachers->execute([$academicYear, $semester]);
+        $teacherRows = $teachers->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($teacherRows)) {
+            return 0;
+        }
+
+        $subjects = $pdo->prepare(
+            'SELECT id, course_code, name, program, units\n'
+            . 'FROM historical_subjects\n'
+            . 'WHERE academic_year = ? AND semester = ?\n'
+            . 'ORDER BY id ASC'
+        );
+        $subjects->execute([$academicYear, $semester]);
+        $subjectRows = $subjects->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($subjectRows)) {
+            return 0;
+        }
+
+        // Start with zero load per teacher for balancing.
+        $teacherLoad = [];
+        foreach ($teacherRows as $t) {
+            $teacherLoad[(int) $t['id']] = 0;
+        }
+
+        $ins = $pdo->prepare(
+            'INSERT INTO historical_assignments\n'
+            . '(academic_year, semester, subject_id, subject_code, teacher_id, teacher_name, teacher_email, status, rationale)\n'
+            . 'VALUES (?, ?, ?, ?, ?, ?, ?, "Assigned", ?)'
+        );
+
+        $count = 0;
+        foreach ($subjectRows as $s) {
+            $subjectId = (int) ($s['id'] ?? 0);
+            $subjectCode = trim((string) ($s['course_code'] ?? ''));
+            $subjectName = trim((string) ($s['name'] ?? ''));
+            $program = trim((string) ($s['program'] ?? ''));
+            $units = (int) ($s['units'] ?? 0);
+
+            if ($subjectId <= 0 || $subjectCode === '') {
+                continue;
+            }
+
+            $keywords = array_merge($tokenize($subjectName), $tokenize($program));
+            $bestTeacher = null;
+            $bestScore = -1;
+
+            foreach ($teacherRows as $t) {
+                $tid = (int) ($t['id'] ?? 0);
+                if ($tid <= 0) {
+                    continue;
+                }
+                $expertise = strtolower(trim((string) ($t['expertise_tags'] ?? '')));
+                $score = 0;
+                foreach ($keywords as $kw) {
+                    if ($kw !== '' && str_contains($expertise, $kw)) {
+                        $score++;
+                    }
+                }
+
+                // Tie-break: prefer lower current synthetic load.
+                $load = (int) ($teacherLoad[$tid] ?? 0);
+                $tieBreaker = -$load;
+
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestTeacher = $t;
+                    $bestTeacher['_tiebreak'] = $tieBreaker;
+                } elseif ($score === $bestScore && $bestTeacher !== null) {
+                    $bestTb = (int) ($bestTeacher['_tiebreak'] ?? 0);
+                    if ($tieBreaker > $bestTb) {
+                        $bestTeacher = $t;
+                        $bestTeacher['_tiebreak'] = $tieBreaker;
+                    }
+                }
+            }
+
+            if ($bestTeacher === null) {
+                continue;
+            }
+
+            $teacherId = (int) ($bestTeacher['id'] ?? 0);
+            if ($teacherId <= 0) {
+                continue;
+            }
+
+            $teacherName = (string) ($bestTeacher['name'] ?? '');
+            $teacherEmail = (string) ($bestTeacher['email'] ?? '');
+
+            $rationale = 'Auto-generated assignment (no historical assignment file provided)';
+            $ins->execute([
+                $academicYear,
+                $semester,
+                $subjectId,
+                $subjectCode,
+                $teacherId,
+                $teacherName,
+                $teacherEmail,
+                $rationale,
+            ]);
+            $count++;
+
+            $teacherLoad[$teacherId] = (int) ($teacherLoad[$teacherId] ?? 0) + max(0, $units);
+        }
+
+        // Best-effort: update units_assigned based on generated assignments.
+        try {
+            $upd = $pdo->prepare(
+                'UPDATE historical_teachers ht\n'
+                . 'SET ht.units_assigned = (\n'
+                . '  SELECT COALESCE(SUM(hsub.units), 0)\n'
+                . '  FROM historical_assignments ha\n'
+                . '  JOIN historical_subjects hsub\n'
+                . '    ON hsub.academic_year = ha.academic_year\n'
+                . '   AND hsub.semester = ha.semester\n'
+                . '   AND hsub.id = ha.subject_id\n'
+                . '  WHERE ha.academic_year = ?\n'
+                . '    AND ha.semester = ?\n'
+                . '    AND ha.teacher_id = ht.id\n'
+                . ')\n'
+                . 'WHERE ht.academic_year = ? AND ht.semester = ?'
+            );
+            $upd->execute([$academicYear, $semester, $academicYear, $semester]);
+        } catch (Exception $ignore) {
+        }
+
+        return $count;
+    };
     
     try {
         // Validate historical data exists
@@ -223,6 +459,7 @@ function updateHistoricalAnalytics() {
         if ($teacherCount === 0 && $subjectCount === 0 && $scheduleCount === 0) {
             return [
                 'success' => false,
+                'status' => 'error',
                 'message' => 'No historical data available. Please upload historical data files first.',
                 'data_loaded' => false
             ];
@@ -247,6 +484,34 @@ function updateHistoricalAnalytics() {
             $updatedScheduleCodes = 0;
         }
 
+        // Backfill metadata for all known periods and generate synthetic assignments if missing.
+        $periods = $listPeriods();
+        $periodsProcessed = 0;
+        $metadataUpserts = 0;
+        $syntheticAssignments = 0;
+
+        foreach ($periods as $p) {
+            $ay = (string) ($p['academic_year'] ?? '');
+            $sem = (string) ($p['semester'] ?? '');
+            if ($ay === '' || $sem === '') {
+                continue;
+            }
+
+            // Generate assignments only if none exist for that period.
+            try {
+                $syntheticAssignments += $generateSyntheticAssignmentsForPeriod($ay, $sem);
+            } catch (Exception $ignore) {
+            }
+
+            try {
+                $upsertMetadataForPeriod($ay, $sem);
+                $metadataUpserts++;
+            } catch (Exception $ignore) {
+            }
+
+            $periodsProcessed++;
+        }
+
         // Find latest academic year available (best-effort)
         $latestYear = null;
         try {
@@ -263,17 +528,20 @@ function updateHistoricalAnalytics() {
         $insertAudit->execute([
             'Analytics Update',
             sprintf(
-                'Predictive analytics refreshed: %d teachers, %d subjects, %d schedules from historical data (%d schedule codes backfilled)',
+                'Predictive analytics refreshed: %d teachers, %d subjects, %d schedules from historical data (%d schedule codes backfilled, %d synthetic assignments generated, %d metadata upserts)',
                 $teacherCount,
                 $subjectCount,
                 $scheduleCount,
-                $updatedScheduleCodes
+                $updatedScheduleCodes,
+                $syntheticAssignments,
+                $metadataUpserts
             ),
             'Program Chair'
         ]);
         
         return [
             'success' => true,
+            'status' => 'success',
             'message' => 'Historical analytics updated successfully',
             'data_loaded' => true,
             'stats' => [
@@ -281,12 +549,16 @@ function updateHistoricalAnalytics() {
                 'subjects' => $subjectCount,
                 'schedules' => $scheduleCount,
                 'schedule_codes_backfilled' => $updatedScheduleCodes,
+                'periods_processed' => $periodsProcessed,
+                'metadata_upserts' => $metadataUpserts,
+                'synthetic_assignments_generated' => $syntheticAssignments,
                 'latest_academic_year' => $latestYear['academic_year'] ?? 'N/A'
             ]
         ];
     } catch (Exception $e) {
         return [
             'success' => false,
+            'status' => 'error',
             'message' => 'Error updating analytics: ' . $e->getMessage(),
             'data_loaded' => false
         ];
