@@ -14,8 +14,8 @@ class GeminiEvaluator
     public function isEnabled(): bool
     {
         $key = trim($this->apiKey);
-        // Disabled when missing or left as placeholder.
-        if ($key === '' || $key === 'AIzaSyAc2guweyZowjbn289MNKWc3VP8VbVvp2A') {
+        // Disabled when missing.
+        if ($key === 'AIzaSyAc2guweyZowjbn289MNKWc3VP8VbVvp2A') {
             return false;
         }
 
@@ -387,6 +387,159 @@ PROMPT;
             'risk_level' => $riskLevelNorm,
             'hr_recommendation' => $hrRecommendation,
             'impact_warning' => $impactWarning,
+        ];
+    }
+
+    /**
+     * Analyze predictive shortage data and generate an AI-powered executive summary.
+     *
+     * @param array $shortageData Array of subject shortage data from predict_shortages.php
+     * @return array{summary: string, risk_overview: string, top_actions: array, semester_outlook: string}
+     */
+    public function analyzePredictions(array $shortageData): array
+    {
+        $fallback = [
+            'summary' => 'Analysis based on historical trends and current faculty capacity.',
+            'risk_overview' => 'Review the shortage data below for details.',
+            'top_actions' => [],
+            'semester_outlook' => 'Monitor trends closely.',
+        ];
+
+        if (empty($shortageData)) {
+            $fallback['summary'] = 'No shortage data available for analysis.';
+            return $fallback;
+        }
+
+        if (!$this->isEnabled()) {
+            // Build heuristic summary
+            $critical = 0;
+            $atRisk = 0;
+            $safe = 0;
+            $totalShortfall = 0;
+            $actions = [];
+
+            foreach ($shortageData as $item) {
+                $shortage = (int) ($item['unit_shortage'] ?? 0);
+                $totalShortfall += $shortage;
+                if ($shortage >= 12) {
+                    $critical++;
+                    $actions[] = 'Hire Full-Time instructor for ' . ($item['subject_name'] ?? 'Unknown');
+                } elseif ($shortage > 0) {
+                    $atRisk++;
+                    $actions[] = 'Hire Part-Time instructor for ' . ($item['subject_name'] ?? 'Unknown');
+                } else {
+                    $safe++;
+                }
+            }
+
+            return [
+                'summary' => sprintf(
+                    'Out of %d subjects analyzed, %d are critical, %d at risk, and %d within capacity. Total projected shortfall: %d units.',
+                    count($shortageData), $critical, $atRisk, $safe, $totalShortfall
+                ),
+                'risk_overview' => $critical > 0
+                    ? 'Immediate hiring action needed for ' . $critical . ' subject(s) with critical shortages.'
+                    : ($atRisk > 0 ? 'Monitor ' . $atRisk . ' at-risk subject(s) for potential hiring needs.' : 'All subjects are within current capacity.'),
+                'top_actions' => array_slice($actions, 0, 5),
+                'semester_outlook' => $critical > 0
+                    ? 'High risk of enrollment bottlenecks if shortages are not addressed before next semester.'
+                    : 'Faculty capacity appears manageable for the upcoming semester.',
+            ];
+        }
+
+        // Build a concise data summary for the AI prompt
+        $dataLines = [];
+        foreach (array_slice($shortageData, 0, 15) as $item) {
+            $name = trim((string) ($item['subject_name'] ?? 'Unknown'));
+            $projected = (int) ($item['projected_units_needed'] ?? 0);
+            $capacity = (int) ($item['total_faculty_capacity'] ?? 0);
+            $shortage = (int) ($item['unit_shortage'] ?? 0);
+            $history = implode(',', array_map('intval', (array) ($item['history'] ?? [])));
+            $dataLines[] = "- {$name}: projected={$projected}, capacity={$capacity}, shortage={$shortage}, history=[{$history}]";
+        }
+        $dataSummary = implode("\n", $dataLines);
+
+        $prompt = <<<PROMPT
+You are an Expert University Academic Planner and Data Analyst.
+Analyze the following faculty demand forecast data and provide an executive summary.
+
+FORECAST DATA ({count} subjects):
+{$dataSummary}
+
+YOUR TASK:
+Provide a strategic overview with actionable insights. Return ONLY a valid JSON object with these keys:
+- "summary": A 2-3 sentence executive summary of the overall faculty demand situation
+- "risk_overview": A 1-2 sentence assessment of the risk level across all subjects
+- "top_actions": An array of up to 5 short action items (strings), each max 80 chars
+- "semester_outlook": A 1 sentence outlook for the upcoming semester
+
+Do not wrap the JSON in markdown code fences or any other formatting.
+PROMPT;
+
+        $prompt = str_replace('{count}', (string) count($shortageData), $prompt);
+
+        $payload = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt],
+                    ],
+                ],
+            ],
+            'generationConfig' => [
+                'temperature' => 0.2,
+                'maxOutputTokens' => 512,
+            ],
+        ];
+
+        $url = $this->endpoint . '?key=' . urlencode($this->apiKey);
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return $fallback;
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS     => json_encode($payload),
+            CURLOPT_CONNECTTIMEOUT => 8,
+            CURLOPT_TIMEOUT        => 25,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false || $httpCode !== 200) {
+            return $fallback;
+        }
+
+        $body = json_decode($response, true);
+        if (!isset($body['candidates'][0]['content']['parts'][0]['text'])) {
+            return $fallback;
+        }
+
+        $text = trim((string) $body['candidates'][0]['content']['parts'][0]['text']);
+        $text = preg_replace('/^```(?:json)?\s*/i', '', $text);
+        $text = preg_replace('/\s*```$/i', '', $text);
+
+        $start = strpos($text, '{');
+        $end = strrpos($text, '}');
+        if ($start !== false && $end !== false && $end > $start) {
+            $text = substr($text, $start, $end - $start + 1);
+        }
+
+        $result = json_decode($text, true);
+        if (!is_array($result)) {
+            return $fallback;
+        }
+
+        return [
+            'summary' => trim((string) ($result['summary'] ?? $fallback['summary'])),
+            'risk_overview' => trim((string) ($result['risk_overview'] ?? $fallback['risk_overview'])),
+            'top_actions' => is_array($result['top_actions'] ?? null) ? array_slice($result['top_actions'], 0, 5) : $fallback['top_actions'],
+            'semester_outlook' => trim((string) ($result['semester_outlook'] ?? $fallback['semester_outlook'])),
         ];
     }
 }
