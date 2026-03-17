@@ -3578,3 +3578,143 @@ async function exportAuditLogs(format) {
         doc.save('audit_logs_' + new Date().toISOString().split('T')[0] + '.pdf');
     }
 }
+
+// =====================================================
+// API KEY MANAGEMENT DROPDOWN
+// =====================================================
+
+function toggleApiDropdown() {
+    const dd = document.getElementById('apiDropdown');
+    if (!dd) return;
+    const isHidden = dd.classList.contains('hidden');
+    dd.classList.toggle('hidden');
+    if (isHidden) refreshApiStatus();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const dd = document.getElementById('apiDropdown');
+    if (!dd || dd.classList.contains('hidden')) return;
+    if (!e.target.closest('#apiDropdown') && !e.target.closest('[onclick*="toggleApiDropdown"]')) {
+        dd.classList.add('hidden');
+    }
+});
+
+function refreshApiStatus() {
+    const badge = document.getElementById('apiStatusBadge');
+    const masked = document.getElementById('apiKeyMasked');
+    const totalReq = document.getElementById('apiTotalRequests');
+    const lastUsed = document.getElementById('apiLastUsed');
+    if (badge) { badge.textContent = 'Checking...'; badge.className = 'px-2 py-0.5 text-xs font-medium rounded-full bg-slate-200 text-slate-600'; }
+
+    fetch('api/api_settings.php')
+        .then(r => r.json())
+        .then(data => {
+            if (data.status !== 'success') return;
+
+            if (masked) masked.textContent = data.api_key_masked || 'Not configured';
+            if (totalReq) totalReq.textContent = data.total_requests.toLocaleString();
+            if (lastUsed) lastUsed.textContent = data.last_used_at ? new Date(data.last_used_at).toLocaleDateString() : 'Never';
+
+            if (badge) {
+                const statusMap = {
+                    active:         { text: 'Active',         cls: 'bg-emerald-100 text-emerald-700' },
+                    configured:     { text: 'Configured',     cls: 'bg-blue-100 text-blue-700' },
+                    not_configured: { text: 'Not Configured', cls: 'bg-slate-200 text-slate-600' },
+                    invalid:        { text: 'Invalid Key',    cls: 'bg-red-100 text-red-700' },
+                    quota_exceeded: { text: 'Quota Exceeded', cls: 'bg-amber-100 text-amber-700' },
+                    error:          { text: 'Error',          cls: 'bg-red-100 text-red-700' },
+                };
+                const s = statusMap[data.api_status] || statusMap.error;
+                badge.textContent = s.text;
+                badge.className = 'px-2 py-0.5 text-xs font-medium rounded-full ' + s.cls;
+            }
+        })
+        .catch(() => {
+            if (badge) { badge.textContent = 'Error'; badge.className = 'px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700'; }
+        });
+}
+
+function openApiKeyModal() {
+    document.getElementById('apiDropdown')?.classList.add('hidden');
+    const modal = document.getElementById('apiKeyModal');
+    const input = document.getElementById('apiKeyInput');
+    const msg = document.getElementById('apiKeyMsg');
+    if (modal) modal.classList.remove('hidden');
+    if (input) { input.value = ''; input.type = 'password'; }
+    if (msg) msg.classList.add('hidden');
+    const eye = document.getElementById('apiKeyEyeIcon');
+    if (eye) { eye.className = 'fas fa-eye'; }
+}
+
+function closeApiKeyModal() {
+    document.getElementById('apiKeyModal')?.classList.add('hidden');
+}
+
+function toggleApiKeyVisibility() {
+    const input = document.getElementById('apiKeyInput');
+    const icon = document.getElementById('apiKeyEyeIcon');
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        if (icon) icon.className = 'fas fa-eye';
+    }
+}
+
+function showApiKeyMsg(text, type) {
+    const msg = document.getElementById('apiKeyMsg');
+    if (!msg) return;
+    msg.textContent = text;
+    msg.className = 'px-3 py-2 rounded-lg text-sm ' + (type === 'error' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700');
+    msg.classList.remove('hidden');
+}
+
+function saveApiKey() {
+    const input = document.getElementById('apiKeyInput');
+    const key = (input?.value || '').trim();
+    if (!key) { showApiKeyMsg('Please enter an API key.', 'error'); return; }
+
+    const btn = document.getElementById('saveApiKeyBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Saving...'; }
+
+    fetch('api/api_settings.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: key })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showApiKeyMsg(data.message, 'success');
+            setTimeout(() => { closeApiKeyModal(); refreshApiStatus(); }, 1200);
+        } else {
+            showApiKeyMsg(data.message || 'Failed to save.', 'error');
+        }
+    })
+    .catch(() => showApiKeyMsg('Network error. Please try again.', 'error'))
+    .finally(() => {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check mr-1"></i>Save Key'; }
+    });
+}
+
+function removeApiKey() {
+    if (!confirm('Remove the API key? AI-powered features will be disabled.')) return;
+    fetch('api/api_settings.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: '' })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showApiKeyMsg('API key removed.', 'success');
+            setTimeout(() => { closeApiKeyModal(); refreshApiStatus(); }, 1200);
+        } else {
+            showApiKeyMsg(data.message || 'Failed to remove.', 'error');
+        }
+    })
+    .catch(() => showApiKeyMsg('Network error.', 'error'));
+}

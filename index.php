@@ -294,15 +294,53 @@ try {
                         <button onclick="openSettingsModal()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="Settings">
                             <i class="fas fa-cog"></i>
                         </button>
-                        <div class="hidden sm:flex items-center gap-3 pl-4 border-l border-slate-200">
-                            <div class="w-9 h-9 bg-gradient-to-br from-indigo-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                                PC
+                        <div class="hidden sm:flex items-center gap-3 pl-4 border-l border-slate-200 relative">
+                            <button onclick="toggleApiDropdown()" class="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer">
+                                <div class="w-9 h-9 bg-gradient-to-br from-indigo-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                                    PC
+                                </div>
+                                <div class="hidden lg:block text-left">
+                                    <p class="text-sm font-medium text-slate-900">Program Chair</p>
+                                    <p class="text-xs text-slate-500">College of Engineering</p>
+                                </div>
+                                <i class="fas fa-chevron-down text-slate-400 text-xs"></i>
+                            </button>
+
+                            <!-- API Key Management Dropdown -->
+                            <div id="apiDropdown" class="hidden absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+                                <div class="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-sm font-semibold text-slate-800">
+                                            <i class="fas fa-key text-indigo-500 mr-1.5"></i>Gemini API
+                                        </h3>
+                                        <span id="apiStatusBadge" class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-200 text-slate-600">Checking...</span>
+                                    </div>
+                                </div>
+                                <div class="px-4 py-3 space-y-3">
+                                    <div>
+                                        <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Current Key</label>
+                                        <p id="apiKeyMasked" class="text-sm font-mono text-slate-700 mt-0.5">Loading...</p>
+                                    </div>
+                                    <div class="flex gap-4">
+                                        <div>
+                                            <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Requests Made</label>
+                                            <p id="apiTotalRequests" class="text-sm font-semibold text-slate-800 mt-0.5">—</p>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Last Used</label>
+                                            <p id="apiLastUsed" class="text-sm text-slate-700 mt-0.5">—</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="px-4 py-3 border-t border-slate-100 bg-slate-50 flex gap-2">
+                                    <button onclick="openApiKeyModal()" class="flex-1 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                                        <i class="fas fa-pen-to-square mr-1"></i>Change Key
+                                    </button>
+                                    <button onclick="refreshApiStatus()" class="px-3 py-2 border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-100 transition-colors">
+                                        <i class="fas fa-rotate"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="hidden lg:block">
-                                <p class="text-sm font-medium text-slate-900">Program Chair</p>
-                                <p class="text-xs text-slate-500">College of Engineering</p>
-                            </div>
-                            <i class="fas fa-chevron-down text-slate-400 text-xs"></i>
                         </div>
                     </div>
                 </div>
@@ -1192,6 +1230,47 @@ try {
 
             <div class="px-6 py-4 border-t border-slate-200 flex justify-end bg-slate-50 rounded-b-xl">
                 <button onclick="closeConflictModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">Understood</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: API KEY MANAGEMENT -->
+    <div id="apiKeyModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center gap-3">
+                <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-key text-indigo-600"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Manage API Key</h2>
+                    <p class="text-xs text-slate-500">Google Gemini API for AI-powered features</p>
+                </div>
+            </div>
+
+            <div class="px-6 py-5 space-y-4">
+                <div>
+                    <label for="apiKeyInput" class="block text-sm font-medium text-slate-700 mb-1.5">API Key</label>
+                    <div class="relative">
+                        <input type="password" id="apiKeyInput" placeholder="AIza..." class="w-full px-4 py-2.5 pr-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm" autocomplete="off">
+                        <button onclick="toggleApiKeyVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+                            <i id="apiKeyEyeIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <p class="mt-1.5 text-xs text-slate-500">Get your key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-indigo-600 hover:underline">Google AI Studio</a></p>
+                </div>
+                <div id="apiKeyMsg" class="hidden px-3 py-2 rounded-lg text-sm"></div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-slate-200 flex gap-3 justify-between bg-slate-50 rounded-b-xl">
+                <button onclick="removeApiKey()" class="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium">
+                    <i class="fas fa-trash-can mr-1"></i>Remove Key
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="closeApiKeyModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors font-medium">Cancel</button>
+                    <button onclick="saveApiKey()" id="saveApiKeyBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+                        <i class="fas fa-check mr-1"></i>Save Key
+                    </button>
+                </div>
             </div>
         </div>
     </div>

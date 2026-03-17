@@ -9,8 +9,23 @@ $username = 'root';
 $password = '';
 
 // Gemini AI API Key
-// NOTE: If you prefer not to hardcode secrets, you can set an environment variable named GEMINI_API_KEY.
-define('GEMINI_API_KEY', getenv('GEMINI_API_KEY') ?: 'AIzaSyAc2guweyZowjbn289MNKWc3VP8VbVvp2A');
+// Priority: database api_settings table → environment variable → hardcoded fallback.
+$__geminiKey = '';
+try {
+    $__tmpPdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
+    $__tmpPdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $__keyRow = $__tmpPdo->query("SELECT api_key FROM api_settings WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    if ($__keyRow && $__keyRow['api_key'] !== '') {
+        $__geminiKey = $__keyRow['api_key'];
+    }
+    $__tmpPdo = null;
+} catch (Exception $__e) {
+    // Table may not exist yet; fall through.
+}
+if ($__geminiKey === '') {
+    $__geminiKey = getenv('GEMINI_API_KEY') ?: 'AIzaSyAc2guweyZowjbn289MNKWc3VP8VbVvp2A';
+}
+define('GEMINI_API_KEY', $__geminiKey);
 
 try {
     $pdo = new PDO(

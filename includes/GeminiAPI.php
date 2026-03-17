@@ -22,6 +22,17 @@ class GeminiEvaluator
         return function_exists('curl_init');
     }
 
+    private function incrementUsage(): void
+    {
+        try {
+            $host = 'localhost'; $db = 'smartload'; $u = 'root'; $p = '';
+            $conn = new \PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $u, $p);
+            $conn->exec("UPDATE api_settings SET total_requests = total_requests + 1, last_used_at = NOW() WHERE id = 1");
+        } catch (\Exception $e) {
+            // Silently fail — tracking is non-critical.
+        }
+    }
+
     /**
      * Compare teacher expertise tags against subject prerequisites via the Gemini API.
      *
@@ -89,6 +100,8 @@ PROMPT;
         if ($httpCode !== 200) {
             return ['score' => 0, 'rationale' => 'API returned HTTP ' . $httpCode];
         }
+
+        $this->incrementUsage();
 
         $body = json_decode($response, true);
         if (!isset($body['candidates'][0]['content']['parts'][0]['text'])) {
@@ -189,6 +202,8 @@ PROMPT;
         if ($httpCode !== 200) {
             return ['teacher_id' => 0, 'score' => 0, 'rationale' => 'API returned HTTP ' . $httpCode];
         }
+
+        $this->incrementUsage();
 
         $body = json_decode($response, true);
         if (!isset($body['candidates'][0]['content']['parts'][0]['text'])) {
@@ -314,6 +329,10 @@ PROMPT;
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
+
+        if ($response !== false && $httpCode === 200) {
+            $this->incrementUsage();
+        }
 
         if ($response === false || $httpCode !== 200) {
             $risk = $shortfall >= 12 ? 'Critical' : 'Medium';
