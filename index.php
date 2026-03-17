@@ -195,9 +195,50 @@ try {
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css?v=<?php echo time(); ?>">
+
+    <!-- Critical preloader styles - renders BEFORE Tailwind loads to prevent FOUC -->
+    <style>
+        #pagePreloader {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+        #appWrapper { display: none !important; }
+        #appWrapper.app-ready { display: flex !important; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes indeterminateSlide {
+            0%   { transform: translateX(-100%); }
+            50%  { transform: translateX(150%); }
+            100% { transform: translateX(350%); }
+        }
+    </style>
 </head>
 <body class="bg-slate-50">
-    <div id="appWrapper" class="flex h-screen" style="display:none;">
+    <!-- PAGE PRELOADER (inline styles ensure it works before Tailwind loads) -->
+    <div id="pagePreloader" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0f172a;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:'Inter',sans-serif;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+            <div style="position:relative;width:80px;height:80px;display:flex;align-items:center;justify-content:center;">
+                <div style="position:absolute;inset:0;border-radius:50%;border:3px solid #1e293b;"></div>
+                <div style="position:absolute;inset:0;border-radius:50%;border:3px solid transparent;border-top-color:#818cf8;animation:spin 0.8s linear infinite;"></div>
+                <div style="background:#6366f1;padding:10px;border-radius:8px;">
+                    <i class="fas fa-bolt" style="color:#fff;font-size:18px;"></i>
+                </div>
+            </div>
+            <div style="text-align:center;">
+                <p style="font-size:16px;font-weight:600;color:#e2e8f0;margin:0;">SmartLoad</p>
+                <p style="font-size:14px;color:#64748b;margin:4px 0 0;">Loading, please wait&hellip;</p>
+            </div>
+            <div style="width:192px;background:#1e293b;border-radius:9999px;height:6px;overflow:hidden;margin-top:4px;">
+                <div style="height:100%;background:linear-gradient(to right,#6366f1,#818cf8);border-radius:9999px;width:40%;animation:indeterminateSlide 1.4s ease-in-out infinite;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="appWrapper" class="flex h-screen">
         <!-- Sidebar Overlay (mobile) -->
         <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden" onclick="closeSidebar()"></div>
 
@@ -1640,7 +1681,13 @@ try {
         // Hide on page load
         window.addEventListener('load', function() {
             var app = document.getElementById('appWrapper');
-            if (app) app.style.display = '';
+            var preloader = document.getElementById('pagePreloader');
+            if (app) app.classList.add('app-ready');
+            if (preloader) {
+                preloader.style.transition = 'opacity 0.4s ease';
+                preloader.style.opacity = '0';
+                setTimeout(function() { preloader.remove(); }, 400);
+            }
             hideLoadingOverlay();
         });
     </script>
