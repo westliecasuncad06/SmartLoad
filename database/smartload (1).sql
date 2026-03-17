@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 17, 2026 at 01:23 AM
+-- Generation Time: Mar 17, 2026 at 02:35 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -41,31 +41,31 @@ CREATE TABLE `assignments` (
 --
 
 INSERT INTO `assignments` (`id`, `subject_id`, `teacher_id`, `status`, `rationale`, `created_at`) VALUES
-(57, 156, 124, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(58, 157, 141, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(59, 158, 130, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(60, 159, 127, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(61, 160, 136, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(62, 161, 138, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(63, 162, 137, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(64, 163, 123, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(65, 164, 122, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(66, 165, 132, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(67, 166, 135, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(68, 167, 140, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(69, 168, 125, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(70, 169, 139, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(71, 170, 128, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(72, 171, 134, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(73, 172, 131, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(74, 173, 133, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(75, 174, 126, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:12'),
-(76, 175, 129, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:13'),
-(77, 176, 141, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:13'),
-(78, 177, 138, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:13'),
-(79, 178, 137, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:13'),
-(80, 179, 123, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:13'),
-(81, 180, 122, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 07:25:13');
+(107, 231, 184, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(108, 232, 201, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(109, 233, 190, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(110, 234, 187, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(111, 235, 196, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(112, 236, 198, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(113, 237, 197, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(114, 238, 183, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(115, 239, 182, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(116, 240, 192, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(117, 241, 195, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(118, 242, 200, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(119, 243, 185, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(120, 244, 199, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(121, 245, 188, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(122, 246, 194, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(123, 247, 191, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(124, 248, 193, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(125, 249, 186, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(126, 250, 189, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(127, 251, 201, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(128, 252, 198, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(129, 253, 197, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(130, 254, 183, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08'),
+(131, 255, 182, 'Pending', 'No prerequisite keywords matched expertise tags.', '2026-03-17 09:30:08');
 
 -- --------------------------------------------------------
 
@@ -222,7 +222,65 @@ INSERT INTO `audit_logs` (`id`, `action_type`, `description`, `user`, `created_a
 (134, 'Schedule Generation', 'Auto-assigned \"MATH205 - Discrete Structures\" to \"Ethan Nguyen\" (score: 25/100).', 'System', '2026-03-17 07:25:13'),
 (135, 'Schedule Generation', 'Auto-assigned \"GEN101 - Communication Skills\" to \"Isabella Cruz\" (score: 25/100).', 'System', '2026-03-17 07:25:13'),
 (136, 'Schedule Generation', 'Auto-assigned \"GEN102 - Ethics and Society\" to \"Jane Smith\" (score: 25/100).', 'System', '2026-03-17 07:25:13'),
-(137, 'Schedule Generation', 'Auto-assigned \"GEN103 - Technical Writing\" to \"John Doe\" (score: 25/100).', 'System', '2026-03-17 07:25:13');
+(137, 'Schedule Generation', 'Auto-assigned \"GEN103 - Technical Writing\" to \"John Doe\" (score: 25/100).', 'System', '2026-03-17 07:25:13'),
+(138, 'File Upload', 'Teacher CSV uploaded, 20 inserted', 'Program Chair', '2026-03-17 08:43:20'),
+(139, 'File Upload', 'Subject CSV uploaded, 25 inserted', 'Program Chair', '2026-03-17 08:43:34'),
+(140, 'File Upload', 'Schedule CSV uploaded, 4 inserted', 'Program Chair', '2026-03-17 08:43:39'),
+(141, 'Schedule Generation', 'Auto-assigned \"IT101 - Introduction to IT\" to \"Alan Turing\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(142, 'Schedule Generation', 'Auto-assigned \"IT102 - Data Communications\" to \"Chloe Kim\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(143, 'Schedule Generation', 'Auto-assigned \"CS101 - Programming Fundamentals\" to \"Daniel Lee\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(144, 'Schedule Generation', 'Auto-assigned \"CS102 - Object-Oriented Programming\" to \"Emily Davis\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(145, 'Schedule Generation', 'Auto-assigned \"CS201 - Data Structures\" to \"Emma Thompson\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(146, 'Schedule Generation', 'Auto-assigned \"CS210 - Operating Systems\" to \"Ethan Nguyen\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(147, 'Schedule Generation', 'Auto-assigned \"CS220 - Computer Architecture\" to \"Isabella Cruz\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(148, 'Schedule Generation', 'Auto-assigned \"CS301 - Software Engineering\" to \"Jane Smith\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(149, 'Schedule Generation', 'Auto-assigned \"IT202 - Database Systems\" to \"John Doe\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(150, 'Schedule Generation', 'Auto-assigned \"IT204 - Computer Networking\" to \"Kevin Chen\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(151, 'Schedule Generation', 'Auto-assigned \"IT205 - Systems Analysis and Design\" to \"Liam Anderson\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(152, 'Schedule Generation', 'Auto-assigned \"IT206 - Web Systems and Technologies\" to \"Lucas Perez\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(153, 'Schedule Generation', 'Auto-assigned \"IT209 - Network Security\" to \"Maria Garcia\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(154, 'Schedule Generation', 'Auto-assigned \"IT210 - Database Administration\" to \"Mia Robinson\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(155, 'Schedule Generation', 'Auto-assigned \"IT211 - IT Service Management\" to \"Michael Johnson\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(156, 'Schedule Generation', 'Auto-assigned \"IT240 - Cloud Computing\" to \"Noah Williams\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(157, 'Schedule Generation', 'Auto-assigned \"MATH101 - Calculus I\" to \"Olivia Wilson\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(158, 'Schedule Generation', 'Auto-assigned \"MATH102 - Calculus II\" to \"Priya Patel\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(159, 'Schedule Generation', 'Auto-assigned \"MATH201 - Linear Algebra\" to \"Robert Brown\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(160, 'Schedule Generation', 'Auto-assigned \"MATH202 - Differential Equations\" to \"Sophia Martinez\" (score: 30/100).', 'System', '2026-03-17 08:43:42'),
+(161, 'Schedule Generation', 'Auto-assigned \"MATH203 - Probability and Statistics\" to \"Chloe Kim\" (score: 25/100).', 'System', '2026-03-17 08:43:42'),
+(162, 'Schedule Generation', 'Auto-assigned \"MATH205 - Discrete Structures\" to \"Ethan Nguyen\" (score: 25/100).', 'System', '2026-03-17 08:43:42'),
+(163, 'Schedule Generation', 'Auto-assigned \"GEN101 - Communication Skills\" to \"Isabella Cruz\" (score: 25/100).', 'System', '2026-03-17 08:43:42'),
+(164, 'Schedule Generation', 'Auto-assigned \"GEN102 - Ethics and Society\" to \"Jane Smith\" (score: 25/100).', 'System', '2026-03-17 08:43:42'),
+(165, 'Schedule Generation', 'Auto-assigned \"GEN103 - Technical Writing\" to \"John Doe\" (score: 25/100).', 'System', '2026-03-17 08:43:42'),
+(166, 'File Upload', 'Teacher CSV uploaded, 20 inserted', 'Program Chair', '2026-03-17 09:01:46'),
+(167, 'File Upload', 'Subject CSV uploaded, 25 inserted', 'Program Chair', '2026-03-17 09:01:56'),
+(168, 'File Upload', 'Teacher CSV uploaded, 20 inserted', 'Program Chair', '2026-03-17 09:29:48'),
+(169, 'File Upload', 'Subject CSV uploaded, 25 inserted', 'Program Chair', '2026-03-17 09:29:55'),
+(170, 'File Upload', 'Schedule CSV uploaded, 4 inserted', 'Program Chair', '2026-03-17 09:30:03'),
+(171, 'Schedule Generation', 'Auto-assigned \"IT101 - Introduction to IT\" to \"Alan Turing\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(172, 'Schedule Generation', 'Auto-assigned \"IT102 - Data Communications\" to \"Chloe Kim\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(173, 'Schedule Generation', 'Auto-assigned \"CS101 - Programming Fundamentals\" to \"Daniel Lee\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(174, 'Schedule Generation', 'Auto-assigned \"CS102 - Object-Oriented Programming\" to \"Emily Davis\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(175, 'Schedule Generation', 'Auto-assigned \"CS201 - Data Structures\" to \"Emma Thompson\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(176, 'Schedule Generation', 'Auto-assigned \"CS210 - Operating Systems\" to \"Ethan Nguyen\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(177, 'Schedule Generation', 'Auto-assigned \"CS220 - Computer Architecture\" to \"Isabella Cruz\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(178, 'Schedule Generation', 'Auto-assigned \"CS301 - Software Engineering\" to \"Jane Smith\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(179, 'Schedule Generation', 'Auto-assigned \"IT202 - Database Systems\" to \"John Doe\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(180, 'Schedule Generation', 'Auto-assigned \"IT204 - Computer Networking\" to \"Kevin Chen\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(181, 'Schedule Generation', 'Auto-assigned \"IT205 - Systems Analysis and Design\" to \"Liam Anderson\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(182, 'Schedule Generation', 'Auto-assigned \"IT206 - Web Systems and Technologies\" to \"Lucas Perez\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(183, 'Schedule Generation', 'Auto-assigned \"IT209 - Network Security\" to \"Maria Garcia\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(184, 'Schedule Generation', 'Auto-assigned \"IT210 - Database Administration\" to \"Mia Robinson\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(185, 'Schedule Generation', 'Auto-assigned \"IT211 - IT Service Management\" to \"Michael Johnson\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(186, 'Schedule Generation', 'Auto-assigned \"IT240 - Cloud Computing\" to \"Noah Williams\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(187, 'Schedule Generation', 'Auto-assigned \"MATH101 - Calculus I\" to \"Olivia Wilson\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(188, 'Schedule Generation', 'Auto-assigned \"MATH102 - Calculus II\" to \"Priya Patel\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(189, 'Schedule Generation', 'Auto-assigned \"MATH201 - Linear Algebra\" to \"Robert Brown\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(190, 'Schedule Generation', 'Auto-assigned \"MATH202 - Differential Equations\" to \"Sophia Martinez\" (score: 30/100).', 'System', '2026-03-17 09:30:08'),
+(191, 'Schedule Generation', 'Auto-assigned \"MATH203 - Probability and Statistics\" to \"Chloe Kim\" (score: 25/100).', 'System', '2026-03-17 09:30:08'),
+(192, 'Schedule Generation', 'Auto-assigned \"MATH205 - Discrete Structures\" to \"Ethan Nguyen\" (score: 25/100).', 'System', '2026-03-17 09:30:08'),
+(193, 'Schedule Generation', 'Auto-assigned \"GEN101 - Communication Skills\" to \"Isabella Cruz\" (score: 25/100).', 'System', '2026-03-17 09:30:08'),
+(194, 'Schedule Generation', 'Auto-assigned \"GEN102 - Ethics and Society\" to \"Jane Smith\" (score: 25/100).', 'System', '2026-03-17 09:30:08'),
+(195, 'Schedule Generation', 'Auto-assigned \"GEN103 - Technical Writing\" to \"John Doe\" (score: 25/100).', 'System', '2026-03-17 09:30:08');
 
 -- --------------------------------------------------------
 
@@ -249,7 +307,9 @@ INSERT INTO `historical_analytics_metadata` (`id`, `academic_year`, `semester`, 
 (1, '2022-2023', '1st Semester', '2026-03-17 08:19:18', 6, 6, 5, 'Seeded on 2026-03-17 08:19:18'),
 (2, '2022-2023', '2nd Semester', '2026-03-17 08:19:18', 6, 6, 0, 'Seeded on 2026-03-17 08:19:18'),
 (3, '2023-2024', '1st Semester', '2026-03-17 08:19:18', 6, 6, 0, 'Seeded on 2026-03-17 08:19:18'),
-(4, '2023-2024', '2nd Semester', '2026-03-17 08:19:18', 6, 6, 4, 'Seeded on 2026-03-17 08:19:18');
+(4, '2023-2024', '2nd Semester', '2026-03-17 08:19:18', 6, 6, 4, 'Seeded on 2026-03-17 08:19:18'),
+(8, '2024-2025', '1st Semester', '2026-03-17 08:26:39', 36, 28, 0, 'Seeded on 2026-03-17 08:26:39'),
+(9, '2024-2025', '2nd Semester', '2026-03-17 08:26:39', 10, 12, 5, 'Seeded on 2026-03-17 08:26:39');
 
 -- --------------------------------------------------------
 
@@ -284,7 +344,12 @@ INSERT INTO `historical_assignments` (`id`, `academic_year`, `semester`, `subjec
 (8, '2023-2024', '2nd Semester', 73, 'CS201', 81, 'Alan Turing', 'alan.turing@university.edu', 'Assigned', 'Seeded historical assignment', '2026-03-17 08:19:18'),
 (9, '2023-2024', '2nd Semester', 74, 'CS202', 83, 'Michael Johnson', 'michael.johnson@university.edu', 'Assigned', 'Seeded historical assignment', '2026-03-17 08:19:18'),
 (10, '2023-2024', '2nd Semester', 78, 'DB301', 82, 'Robert Brown', 'robert.brown@university.edu', 'Assigned', 'Seeded historical assignment', '2026-03-17 08:19:18'),
-(11, '2023-2024', '2nd Semester', 77, 'AI201', 84, 'Sophia Martinez', 'sophia.martinez@university.edu', 'Assigned', 'Seeded historical assignment', '2026-03-17 08:19:18');
+(11, '2023-2024', '2nd Semester', 77, 'AI201', 84, 'Sophia Martinez', 'sophia.martinez@university.edu', 'Assigned', 'Seeded historical assignment', '2026-03-17 08:19:18'),
+(15, '2024-2025', '2nd Semester', 81, 'CS201', 90, 'Michael Johnson', 'michael.johnson@university.edu', 'Assigned', 'Seeded for shortage forecasting', '2026-03-17 08:26:39'),
+(16, '2024-2025', '2nd Semester', 82, 'CS202', 90, 'Michael Johnson', 'michael.johnson@university.edu', 'Assigned', 'Seeded for shortage forecasting', '2026-03-17 08:26:39'),
+(17, '2024-2025', '2nd Semester', 87, 'IT205', 89, 'Robert Brown', 'robert.brown@university.edu', 'Assigned', 'Seeded for shortage forecasting', '2026-03-17 08:26:39'),
+(18, '2024-2025', '2nd Semester', 86, 'IT204', 86, 'Jane Smith', 'jane.smith@university.edu', 'Assigned', 'Seeded for shortage forecasting', '2026-03-17 08:26:39'),
+(19, '2024-2025', '2nd Semester', 88, 'MATH101', 87, 'Alan Turing', 'alan.turing@university.edu', 'Assigned', 'Seeded for shortage forecasting', '2026-03-17 08:26:39');
 
 -- --------------------------------------------------------
 
@@ -382,7 +447,25 @@ INSERT INTO `historical_schedules` (`id`, `academic_year`, `semester`, `subject_
 (70, '2023-2024', '2nd Semester', 75, 'IT205', 'Wednesday', '10:00:00', '12:00:00', 'Lab A', 'B', '2026-03-17 08:19:17'),
 (71, '2023-2024', '2nd Semester', 76, 'MATH102', 'Thursday', '09:00:00', '11:00:00', 'Room 202', 'B', '2026-03-17 08:19:17'),
 (72, '2023-2024', '2nd Semester', 77, 'AI201', 'Friday', '08:00:00', '10:00:00', 'Lab ML', 'B', '2026-03-17 08:19:17'),
-(73, '2023-2024', '2nd Semester', 78, 'DB301', 'Friday', '10:00:00', '12:00:00', 'Lab SQL', 'B', '2026-03-17 08:19:17');
+(73, '2023-2024', '2nd Semester', 78, 'DB301', 'Friday', '10:00:00', '12:00:00', 'Lab SQL', 'B', '2026-03-17 08:19:17'),
+(75, '2024-2025', '1st Semester', 1, 'CS101', 'Monday', '08:00:00', '11:00:00', 'Room 101', 'BSCS-1B', '2026-03-17 08:26:39'),
+(76, '2024-2025', '1st Semester', 15, 'CS101', 'Monday', '08:00:00', '11:00:00', 'Room 101', 'BSCS-1B', '2026-03-17 08:26:39'),
+(77, '2024-2025', '1st Semester', 5, 'CS102', 'Tuesday', '13:00:00', '15:00:00', 'Room 103', 'BSCS-1B', '2026-03-17 08:26:39'),
+(78, '2024-2025', '1st Semester', 19, 'CS102', 'Tuesday', '13:00:00', '15:00:00', 'Room 103', 'BSCS-1B', '2026-03-17 08:26:39'),
+(79, '2024-2025', '1st Semester', 2, 'IT202', 'Wednesday', '10:00:00', '13:00:00', 'Lab B', 'BSIT-2B', '2026-03-17 08:26:39'),
+(80, '2024-2025', '1st Semester', 16, 'IT202', 'Wednesday', '10:00:00', '13:00:00', 'Lab B', 'BSIT-2B', '2026-03-17 08:26:39'),
+(81, '2024-2025', '1st Semester', 7, 'IT102', 'Thursday', '09:00:00', '11:00:00', 'Lab D', 'BSIT-1B', '2026-03-17 08:26:39'),
+(82, '2024-2025', '1st Semester', 21, 'IT102', 'Thursday', '09:00:00', '11:00:00', 'Lab D', 'BSIT-1B', '2026-03-17 08:26:39'),
+(83, '2024-2025', '1st Semester', 10, 'CS301', 'Friday', '13:00:00', '16:00:00', 'Room 303', 'BSCS-3B', '2026-03-17 08:26:39'),
+(84, '2024-2025', '1st Semester', 24, 'CS301', 'Friday', '13:00:00', '16:00:00', 'Room 303', 'BSCS-3B', '2026-03-17 08:26:39'),
+(90, '2024-2025', '2nd Semester', 81, 'CS201', 'Monday', '08:00:00', '11:00:00', 'Room 104', 'BSCS-2A', '2026-03-17 08:26:39'),
+(91, '2024-2025', '2nd Semester', 81, 'CS201', 'Monday', '13:00:00', '16:00:00', 'Room 104', 'BSCS-2B', '2026-03-17 08:26:39'),
+(92, '2024-2025', '2nd Semester', 82, 'CS202', 'Tuesday', '10:00:00', '12:00:00', 'Room 105', 'BSCS-2A', '2026-03-17 08:26:39'),
+(93, '2024-2025', '2nd Semester', 82, 'CS202', 'Tuesday', '13:00:00', '15:00:00', 'Room 105', 'BSCS-2B', '2026-03-17 08:26:39'),
+(94, '2024-2025', '2nd Semester', 87, 'IT205', 'Wednesday', '10:00:00', '12:00:00', 'Lab A', 'BSIT-2A', '2026-03-17 08:26:39'),
+(95, '2024-2025', '2nd Semester', 87, 'IT205', 'Wednesday', '13:00:00', '15:00:00', 'Lab A', 'BSIT-2B', '2026-03-17 08:26:39'),
+(96, '2024-2025', '2nd Semester', 86, 'IT204', 'Thursday', '09:00:00', '11:00:00', 'Lab C', 'BSIT-1A', '2026-03-17 08:26:39'),
+(97, '2024-2025', '2nd Semester', 88, 'MATH101', 'Friday', '08:00:00', '10:00:00', 'Room 201', 'BSMATH-1A', '2026-03-17 08:26:39');
 
 -- --------------------------------------------------------
 
@@ -485,7 +568,19 @@ INSERT INTO `historical_subjects` (`id`, `academic_year`, `semester`, `original_
 (75, '2023-2024', '2nd Semester', NULL, 'IT205', 'Systems Analysis and Design', 'BS Information Technology', 3, 'IT202', '2026-03-17 08:19:17'),
 (76, '2023-2024', '2nd Semester', NULL, 'MATH102', 'Calculus II', 'BS Mathematics', 3, 'MATH101', '2026-03-17 08:19:17'),
 (77, '2023-2024', '2nd Semester', NULL, 'AI201', 'Intro to Machine Learning', 'BS Computer Science', 3, 'CS201', '2026-03-17 08:19:17'),
-(78, '2023-2024', '2nd Semester', NULL, 'DB301', 'Advanced SQL', 'BS Information Technology', 3, 'IT202', '2026-03-17 08:19:17');
+(78, '2023-2024', '2nd Semester', NULL, 'DB301', 'Advanced SQL', 'BS Information Technology', 3, 'IT202', '2026-03-17 08:19:17'),
+(79, '2024-2025', '2nd Semester', NULL, 'CS101', 'Web Development', 'BS Computer Science', 3, 'None', '2026-03-17 08:26:38'),
+(80, '2024-2025', '2nd Semester', NULL, 'CS102', 'Programming Fundamentals', 'BS Computer Science', 3, 'None', '2026-03-17 08:26:38'),
+(81, '2024-2025', '2nd Semester', NULL, 'CS201', 'Data Structures', 'BS Computer Science', 3, 'CS102', '2026-03-17 08:26:38'),
+(82, '2024-2025', '2nd Semester', NULL, 'CS202', 'Object-Oriented Programming', 'BS Computer Science', 3, 'CS102', '2026-03-17 08:26:38'),
+(83, '2024-2025', '2nd Semester', NULL, 'CS301', 'Software Engineering', 'BS Computer Science', 3, 'CS201', '2026-03-17 08:26:38'),
+(84, '2024-2025', '2nd Semester', NULL, 'IT102', 'Introduction to IT', 'BS Information Technology', 3, 'None', '2026-03-17 08:26:38'),
+(85, '2024-2025', '2nd Semester', NULL, 'IT202', 'Database Systems', 'BS Information Technology', 3, 'CS101', '2026-03-17 08:26:38'),
+(86, '2024-2025', '2nd Semester', NULL, 'IT204', 'Computer Networking', 'BS Information Technology', 3, 'IT102', '2026-03-17 08:26:38'),
+(87, '2024-2025', '2nd Semester', NULL, 'IT205', 'Systems Analysis and Design', 'BS Information Technology', 3, 'IT202', '2026-03-17 08:26:38'),
+(88, '2024-2025', '2nd Semester', NULL, 'MATH101', 'Calculus I', 'BS Mathematics', 3, 'None', '2026-03-17 08:26:38'),
+(89, '2024-2025', '2nd Semester', NULL, 'MATH102', 'Calculus II', 'BS Mathematics', 3, 'MATH101', '2026-03-17 08:26:38'),
+(90, '2024-2025', '2nd Semester', NULL, 'CS203', 'Discrete Mathematics', 'BS Computer Science', 3, 'MATH101', '2026-03-17 08:26:38');
 
 -- --------------------------------------------------------
 
@@ -595,7 +690,17 @@ INSERT INTO `historical_teachers` (`id`, `academic_year`, `semester`, `original_
 (81, '2023-2024', '2nd Semester', NULL, 'Alan Turing', 'alan.turing@university.edu', 'Part-time', 12, 3, 'Mathematics, Algorithms', '2026-03-17 08:19:17'),
 (82, '2023-2024', '2nd Semester', NULL, 'Robert Brown', 'robert.brown@university.edu', 'Full-time', 18, 3, 'Database, SQL, Data Modeling', '2026-03-17 08:19:17'),
 (83, '2023-2024', '2nd Semester', NULL, 'Michael Johnson', 'michael.johnson@university.edu', 'Full-time', 18, 3, 'Java, OOP, Software Engineering', '2026-03-17 08:19:17'),
-(84, '2023-2024', '2nd Semester', NULL, 'Sophia Martinez', 'sophia.martinez@university.edu', 'Full-time', 18, 3, 'Artificial Intelligence, Machine Learning', '2026-03-17 08:19:17');
+(84, '2023-2024', '2nd Semester', NULL, 'Sophia Martinez', 'sophia.martinez@university.edu', 'Full-time', 18, 3, 'Artificial Intelligence, Machine Learning', '2026-03-17 08:19:17'),
+(85, '2024-2025', '2nd Semester', NULL, 'John Doe', 'john.doe@university.edu', 'Full-time', 18, 0, 'PHP, MySQL, Web Dev', '2026-03-17 08:26:39'),
+(86, '2024-2025', '2nd Semester', NULL, 'Jane Smith', 'jane.smith@university.edu', 'Full-time', 18, 3, 'Networking, Security', '2026-03-17 08:26:39'),
+(87, '2024-2025', '2nd Semester', NULL, 'Alan Turing', 'alan.turing@university.edu', 'Part-time', 12, 3, 'Mathematics, Algorithms', '2026-03-17 08:26:39'),
+(88, '2024-2025', '2nd Semester', NULL, 'Maria Garcia', 'maria.garcia@university.edu', 'Full-time', 18, 0, 'Literature, Writing', '2026-03-17 08:26:39'),
+(89, '2024-2025', '2nd Semester', NULL, 'Robert Brown', 'robert.brown@university.edu', 'Full-time', 18, 3, 'Database, SQL, Data Modeling', '2026-03-17 08:26:39'),
+(90, '2024-2025', '2nd Semester', NULL, 'Michael Johnson', 'michael.johnson@university.edu', 'Full-time', 18, 6, 'Java, OOP, Software Engineering', '2026-03-17 08:26:39'),
+(91, '2024-2025', '2nd Semester', NULL, 'Sophia Martinez', 'sophia.martinez@university.edu', 'Full-time', 18, 0, 'Artificial Intelligence, Machine Learning', '2026-03-17 08:26:39'),
+(92, '2024-2025', '2nd Semester', NULL, 'Chris Nguyen', 'chris.nguyen@university.edu', 'Part-time', 12, 0, 'Web Development, JavaScript, PHP', '2026-03-17 08:26:39'),
+(93, '2024-2025', '2nd Semester', NULL, 'Ayesha Khan', 'ayesha.khan@university.edu', 'Full-time', 18, 0, 'Networks, Cloud, Security', '2026-03-17 08:26:39'),
+(94, '2024-2025', '2nd Semester', NULL, 'Marco Santos', 'marco.santos@university.edu', 'Part-time', 12, 0, 'Discrete Math, Calculus, Algorithms', '2026-03-17 08:26:39');
 
 -- --------------------------------------------------------
 
@@ -642,10 +747,10 @@ CREATE TABLE `schedules` (
 --
 
 INSERT INTO `schedules` (`id`, `subject_id`, `day_of_week`, `start_time`, `end_time`, `room`, `section`) VALUES
-(109, 156, 'Monday', '08:00:00', '10:00:00', 'Room 101', 'BSIT-1A'),
-(110, 157, 'Monday', '10:00:00', '12:00:00', 'Room 101', 'BSIT-1A'),
-(111, 158, 'Tuesday', '08:00:00', '11:00:00', 'Room 102', 'BSCS-1A'),
-(112, 159, 'Tuesday', '13:00:00', '15:00:00', 'Room 103', 'BSCS-1A');
+(117, 231, 'Monday', '08:00:00', '10:00:00', 'Room 101', 'BSIT-1A'),
+(118, 232, 'Monday', '10:00:00', '12:00:00', 'Room 101', 'BSIT-1A'),
+(119, 233, 'Tuesday', '08:00:00', '11:00:00', 'Room 102', 'BSCS-1A'),
+(120, 234, 'Tuesday', '13:00:00', '15:00:00', 'Room 103', 'BSCS-1A');
 
 -- --------------------------------------------------------
 
@@ -669,31 +774,31 @@ CREATE TABLE `subjects` (
 --
 
 INSERT INTO `subjects` (`id`, `course_code`, `name`, `program`, `units`, `prerequisites`, `is_archived`, `created_at`) VALUES
-(156, 'IT101', 'Introduction to IT', 'BS Information Technology', 3, 'None', 0, '2026-03-17 07:24:57'),
-(157, 'IT102', 'Data Communications', 'BS Information Technology', 3, 'IT101', 0, '2026-03-17 07:24:57'),
-(158, 'CS101', 'Programming Fundamentals', 'BS Computer Science', 3, 'None', 0, '2026-03-17 07:24:57'),
-(159, 'CS102', 'Object-Oriented Programming', 'BS Computer Science', 3, 'CS101', 0, '2026-03-17 07:24:57'),
-(160, 'CS201', 'Data Structures', 'BS Computer Science', 3, 'CS102', 0, '2026-03-17 07:24:57'),
-(161, 'CS210', 'Operating Systems', 'BS Computer Science', 3, 'CS201', 0, '2026-03-17 07:24:57'),
-(162, 'CS220', 'Computer Architecture', 'BS Computer Science', 3, 'CS201', 0, '2026-03-17 07:24:57'),
-(163, 'CS301', 'Software Engineering', 'BS Computer Science', 3, 'CS201', 0, '2026-03-17 07:24:57'),
-(164, 'IT202', 'Database Systems', 'BS Information Technology', 3, 'IT101', 0, '2026-03-17 07:24:57'),
-(165, 'IT204', 'Computer Networking', 'BS Information Technology', 3, 'IT102', 0, '2026-03-17 07:24:57'),
-(166, 'IT205', 'Systems Analysis and Design', 'BS Information Technology', 3, 'IT101', 0, '2026-03-17 07:24:57'),
-(167, 'IT206', 'Web Systems and Technologies', 'BS Information Technology', 3, 'CS101', 0, '2026-03-17 07:24:57'),
-(168, 'IT209', 'Network Security', 'BS Information Technology', 3, 'IT204', 0, '2026-03-17 07:24:57'),
-(169, 'IT210', 'Database Administration', 'BS Information Technology', 3, 'IT202', 0, '2026-03-17 07:24:57'),
-(170, 'IT211', 'IT Service Management', 'BS Information Technology', 3, 'IT205', 0, '2026-03-17 07:24:57'),
-(171, 'IT240', 'Cloud Computing', 'BS Information Technology', 3, 'IT202', 0, '2026-03-17 07:24:57'),
-(172, 'MATH101', 'Calculus I', 'BS Mathematics', 3, 'None', 0, '2026-03-17 07:24:57'),
-(173, 'MATH102', 'Calculus II', 'BS Mathematics', 3, 'MATH101', 0, '2026-03-17 07:24:57'),
-(174, 'MATH201', 'Linear Algebra', 'BS Mathematics', 3, 'MATH102', 0, '2026-03-17 07:24:57'),
-(175, 'MATH202', 'Differential Equations', 'BS Mathematics', 3, 'MATH102', 0, '2026-03-17 07:24:57'),
-(176, 'MATH203', 'Probability and Statistics', 'BS Mathematics', 3, 'MATH101', 0, '2026-03-17 07:24:57'),
-(177, 'MATH205', 'Discrete Structures', 'BS Mathematics', 3, 'MATH101', 0, '2026-03-17 07:24:57'),
-(178, 'GEN101', 'Communication Skills', 'General Education', 3, 'None', 0, '2026-03-17 07:24:57'),
-(179, 'GEN102', 'Ethics and Society', 'General Education', 3, 'None', 0, '2026-03-17 07:24:57'),
-(180, 'GEN103', 'Technical Writing', 'General Education', 3, 'GEN101', 0, '2026-03-17 07:24:57');
+(231, 'IT101', 'Introduction to IT', 'BS Information Technology', 3, 'None', 0, '2026-03-17 09:29:55'),
+(232, 'IT102', 'Data Communications', 'BS Information Technology', 3, 'IT101', 0, '2026-03-17 09:29:55'),
+(233, 'CS101', 'Programming Fundamentals', 'BS Computer Science', 3, 'None', 0, '2026-03-17 09:29:55'),
+(234, 'CS102', 'Object-Oriented Programming', 'BS Computer Science', 3, 'CS101', 0, '2026-03-17 09:29:55'),
+(235, 'CS201', 'Data Structures', 'BS Computer Science', 3, 'CS102', 0, '2026-03-17 09:29:55'),
+(236, 'CS210', 'Operating Systems', 'BS Computer Science', 3, 'CS201', 0, '2026-03-17 09:29:55'),
+(237, 'CS220', 'Computer Architecture', 'BS Computer Science', 3, 'CS201', 0, '2026-03-17 09:29:55'),
+(238, 'CS301', 'Software Engineering', 'BS Computer Science', 3, 'CS201', 0, '2026-03-17 09:29:55'),
+(239, 'IT202', 'Database Systems', 'BS Information Technology', 3, 'IT101', 0, '2026-03-17 09:29:55'),
+(240, 'IT204', 'Computer Networking', 'BS Information Technology', 3, 'IT102', 0, '2026-03-17 09:29:55'),
+(241, 'IT205', 'Systems Analysis and Design', 'BS Information Technology', 3, 'IT101', 0, '2026-03-17 09:29:55'),
+(242, 'IT206', 'Web Systems and Technologies', 'BS Information Technology', 3, 'CS101', 0, '2026-03-17 09:29:55'),
+(243, 'IT209', 'Network Security', 'BS Information Technology', 3, 'IT204', 0, '2026-03-17 09:29:55'),
+(244, 'IT210', 'Database Administration', 'BS Information Technology', 3, 'IT202', 0, '2026-03-17 09:29:55'),
+(245, 'IT211', 'IT Service Management', 'BS Information Technology', 3, 'IT205', 0, '2026-03-17 09:29:55'),
+(246, 'IT240', 'Cloud Computing', 'BS Information Technology', 3, 'IT202', 0, '2026-03-17 09:29:55'),
+(247, 'MATH101', 'Calculus I', 'BS Mathematics', 3, 'None', 0, '2026-03-17 09:29:55'),
+(248, 'MATH102', 'Calculus II', 'BS Mathematics', 3, 'MATH101', 0, '2026-03-17 09:29:55'),
+(249, 'MATH201', 'Linear Algebra', 'BS Mathematics', 3, 'MATH102', 0, '2026-03-17 09:29:55'),
+(250, 'MATH202', 'Differential Equations', 'BS Mathematics', 3, 'MATH102', 0, '2026-03-17 09:29:55'),
+(251, 'MATH203', 'Probability and Statistics', 'BS Mathematics', 3, 'MATH101', 0, '2026-03-17 09:29:55'),
+(252, 'MATH205', 'Discrete Structures', 'BS Mathematics', 3, 'MATH101', 0, '2026-03-17 09:29:55'),
+(253, 'GEN101', 'Communication Skills', 'General Education', 3, 'None', 0, '2026-03-17 09:29:55'),
+(254, 'GEN102', 'Ethics and Society', 'General Education', 3, 'None', 0, '2026-03-17 09:29:55'),
+(255, 'GEN103', 'Technical Writing', 'General Education', 3, 'GEN101', 0, '2026-03-17 09:29:55');
 
 -- --------------------------------------------------------
 
@@ -718,26 +823,26 @@ CREATE TABLE `teachers` (
 --
 
 INSERT INTO `teachers` (`id`, `name`, `email`, `type`, `max_units`, `current_units`, `expertise_tags`, `is_archived`, `created_at`) VALUES
-(122, 'John Doe', 'john.doe@university.edu', 'Full-time', 18, 6, 'PHP, MySQL, Web Dev', 0, '2026-03-17 07:24:50'),
-(123, 'Jane Smith', 'jane.smith@university.edu', 'Full-time', 18, 6, 'Networking, Security', 0, '2026-03-17 07:24:50'),
-(124, 'Alan Turing', 'alan.turing@university.edu', 'Part-time', 12, 3, 'Mathematics, Algorithms', 0, '2026-03-17 07:24:50'),
-(125, 'Maria Garcia', 'maria.garcia@university.edu', 'Full-time', 18, 3, 'Literature, Writing', 0, '2026-03-17 07:24:50'),
-(126, 'Robert Brown', 'robert.brown@university.edu', 'Full-time', 18, 3, 'Database, SQL, Data Modeling', 0, '2026-03-17 07:24:50'),
-(127, 'Emily Davis', 'emily.davis@university.edu', 'Part-time', 12, 3, 'UI/UX Design, Figma', 0, '2026-03-17 07:24:50'),
-(128, 'Michael Johnson', 'michael.johnson@university.edu', 'Full-time', 18, 3, 'Java, OOP, Software Engineering', 0, '2026-03-17 07:24:50'),
-(129, 'Sophia Martinez', 'sophia.martinez@university.edu', 'Full-time', 18, 3, 'Artificial Intelligence, Machine Learning', 0, '2026-03-17 07:24:50'),
-(130, 'Daniel Lee', 'daniel.lee@university.edu', 'Part-time', 12, 3, 'Cloud Computing, AWS', 0, '2026-03-17 07:24:50'),
-(131, 'Olivia Wilson', 'olivia.wilson@university.edu', 'Full-time', 18, 3, 'Cybersecurity, Ethical Hacking', 0, '2026-03-17 07:24:50'),
-(132, 'Kevin Chen', 'kevin.chen@university.edu', 'Full-time', 18, 3, 'Data Structures, Algorithms, Discrete Math', 0, '2026-03-17 07:24:50'),
-(133, 'Priya Patel', 'priya.patel@university.edu', 'Full-time', 18, 3, 'Operating Systems, Computer Architecture', 0, '2026-03-17 07:24:50'),
-(134, 'Noah Williams', 'noah.williams@university.edu', 'Part-time', 12, 3, 'Web Development, JavaScript, UI', 0, '2026-03-17 07:24:50'),
-(135, 'Liam Anderson', 'liam.anderson@university.edu', 'Full-time', 18, 3, 'Software Engineering, Project Management', 0, '2026-03-17 07:24:50'),
-(136, 'Emma Thompson', 'emma.thompson@university.edu', 'Part-time', 12, 3, 'Probability, Statistics, Data Analytics', 0, '2026-03-17 07:24:50'),
-(137, 'Isabella Cruz', 'isabella.cruz@university.edu', 'Full-time', 18, 6, 'Database Administration, SQL, ETL', 0, '2026-03-17 07:24:50'),
-(138, 'Ethan Nguyen', 'ethan.nguyen@university.edu', 'Full-time', 18, 6, 'Networks, Data Communications, Routing', 0, '2026-03-17 07:24:50'),
-(139, 'Mia Robinson', 'mia.robinson@university.edu', 'Part-time', 12, 3, 'Technical Writing, Communication', 0, '2026-03-17 07:24:50'),
-(140, 'Lucas Perez', 'lucas.perez@university.edu', 'Full-time', 18, 3, 'Information Security, Network Security', 0, '2026-03-17 07:24:50'),
-(141, 'Chloe Kim', 'chloe.kim@university.edu', 'Full-time', 18, 6, 'Mobile Development, HCI, UX', 0, '2026-03-17 07:24:50');
+(182, 'John Doe', 'john.doe@university.edu', 'Full-time', 18, 6, 'PHP, MySQL, Web Dev', 0, '2026-03-17 09:29:48'),
+(183, 'Jane Smith', 'jane.smith@university.edu', 'Full-time', 18, 6, 'Networking, Security', 0, '2026-03-17 09:29:48'),
+(184, 'Alan Turing', 'alan.turing@university.edu', 'Part-time', 12, 3, 'Mathematics, Algorithms', 0, '2026-03-17 09:29:48'),
+(185, 'Maria Garcia', 'maria.garcia@university.edu', 'Full-time', 18, 3, 'Literature, Writing', 0, '2026-03-17 09:29:48'),
+(186, 'Robert Brown', 'robert.brown@university.edu', 'Full-time', 18, 3, 'Database, SQL, Data Modeling', 0, '2026-03-17 09:29:48'),
+(187, 'Emily Davis', 'emily.davis@university.edu', 'Part-time', 12, 3, 'UI/UX Design, Figma', 0, '2026-03-17 09:29:48'),
+(188, 'Michael Johnson', 'michael.johnson@university.edu', 'Full-time', 18, 3, 'Java, OOP, Software Engineering', 0, '2026-03-17 09:29:48'),
+(189, 'Sophia Martinez', 'sophia.martinez@university.edu', 'Full-time', 18, 3, 'Artificial Intelligence, Machine Learning', 0, '2026-03-17 09:29:48'),
+(190, 'Daniel Lee', 'daniel.lee@university.edu', 'Part-time', 12, 3, 'Cloud Computing, AWS', 0, '2026-03-17 09:29:48'),
+(191, 'Olivia Wilson', 'olivia.wilson@university.edu', 'Full-time', 18, 3, 'Cybersecurity, Ethical Hacking', 0, '2026-03-17 09:29:48'),
+(192, 'Kevin Chen', 'kevin.chen@university.edu', 'Full-time', 18, 3, 'Data Structures, Algorithms, Discrete Math', 0, '2026-03-17 09:29:48'),
+(193, 'Priya Patel', 'priya.patel@university.edu', 'Full-time', 18, 3, 'Operating Systems, Computer Architecture', 0, '2026-03-17 09:29:48'),
+(194, 'Noah Williams', 'noah.williams@university.edu', 'Part-time', 12, 3, 'Web Development, JavaScript, UI', 0, '2026-03-17 09:29:48'),
+(195, 'Liam Anderson', 'liam.anderson@university.edu', 'Full-time', 18, 3, 'Software Engineering, Project Management', 0, '2026-03-17 09:29:48'),
+(196, 'Emma Thompson', 'emma.thompson@university.edu', 'Part-time', 12, 3, 'Probability, Statistics, Data Analytics', 0, '2026-03-17 09:29:48'),
+(197, 'Isabella Cruz', 'isabella.cruz@university.edu', 'Full-time', 18, 6, 'Database Administration, SQL, ETL', 0, '2026-03-17 09:29:48'),
+(198, 'Ethan Nguyen', 'ethan.nguyen@university.edu', 'Full-time', 18, 6, 'Networks, Data Communications, Routing', 0, '2026-03-17 09:29:48'),
+(199, 'Mia Robinson', 'mia.robinson@university.edu', 'Part-time', 12, 3, 'Technical Writing, Communication', 0, '2026-03-17 09:29:48'),
+(200, 'Lucas Perez', 'lucas.perez@university.edu', 'Full-time', 18, 3, 'Information Security, Network Security', 0, '2026-03-17 09:29:48'),
+(201, 'Chloe Kim', 'chloe.kim@university.edu', 'Full-time', 18, 6, 'Mobile Development, HCI, UX', 0, '2026-03-17 09:29:48');
 
 -- --------------------------------------------------------
 
@@ -758,52 +863,52 @@ CREATE TABLE `teacher_availability` (
 --
 
 INSERT INTO `teacher_availability` (`id`, `teacher_id`, `day_of_week`, `start_time`, `end_time`) VALUES
-(1, 122, 'Monday', '08:00:00', '17:00:00'),
-(2, 122, 'Tuesday', '08:00:00', '17:00:00'),
-(3, 122, 'Wednesday', '08:00:00', '17:00:00'),
-(4, 123, 'Tuesday', '09:00:00', '15:00:00'),
-(5, 123, 'Thursday', '09:00:00', '15:00:00'),
-(6, 124, 'Monday', '08:00:00', '12:00:00'),
-(7, 124, 'Wednesday', '08:00:00', '12:00:00'),
-(8, 124, 'Friday', '08:00:00', '12:00:00'),
-(9, 125, 'Monday', '10:00:00', '16:00:00'),
-(10, 125, 'Tuesday', '10:00:00', '16:00:00'),
-(11, 125, 'Thursday', '10:00:00', '16:00:00'),
-(12, 126, 'Monday', '09:00:00', '17:00:00'),
-(13, 126, 'Wednesday', '09:00:00', '17:00:00'),
-(14, 127, 'Tuesday', '13:00:00', '17:00:00'),
-(15, 127, 'Thursday', '13:00:00', '17:00:00'),
-(16, 128, 'Monday', '08:00:00', '12:00:00'),
-(17, 128, 'Tuesday', '08:00:00', '12:00:00'),
-(18, 128, 'Friday', '08:00:00', '12:00:00'),
-(19, 129, 'Wednesday', '10:00:00', '17:00:00'),
-(20, 129, 'Thursday', '10:00:00', '17:00:00'),
-(21, 130, 'Monday', '13:00:00', '18:00:00'),
-(22, 130, 'Wednesday', '13:00:00', '18:00:00'),
-(23, 131, 'Tuesday', '08:00:00', '16:00:00'),
-(24, 131, 'Thursday', '08:00:00', '16:00:00'),
-(25, 132, 'Monday', '08:00:00', '17:00:00'),
-(26, 132, 'Thursday', '08:00:00', '17:00:00'),
-(27, 133, 'Tuesday', '10:00:00', '17:00:00'),
-(28, 133, 'Friday', '10:00:00', '17:00:00'),
-(29, 134, 'Wednesday', '08:00:00', '12:00:00'),
-(30, 134, 'Friday', '13:00:00', '17:00:00'),
-(31, 135, 'Monday', '10:00:00', '17:00:00'),
-(32, 135, 'Wednesday', '10:00:00', '17:00:00'),
-(33, 136, 'Tuesday', '08:00:00', '12:00:00'),
-(34, 136, 'Thursday', '08:00:00', '12:00:00'),
-(35, 137, 'Monday', '13:00:00', '17:00:00'),
-(36, 137, 'Tuesday', '13:00:00', '17:00:00'),
-(37, 137, 'Thursday', '13:00:00', '17:00:00'),
-(38, 138, 'Wednesday', '08:00:00', '16:00:00'),
-(39, 138, 'Friday', '08:00:00', '16:00:00'),
-(40, 139, 'Monday', '08:00:00', '12:00:00'),
-(41, 139, 'Thursday', '08:00:00', '12:00:00'),
-(42, 140, 'Tuesday', '09:00:00', '17:00:00'),
-(43, 140, 'Wednesday', '09:00:00', '17:00:00'),
-(44, 141, 'Monday', '09:00:00', '12:00:00'),
-(45, 141, 'Wednesday', '09:00:00', '12:00:00'),
-(46, 141, 'Friday', '09:00:00', '12:00:00');
+(139, 182, 'Monday', '08:00:00', '17:00:00'),
+(140, 182, 'Tuesday', '08:00:00', '17:00:00'),
+(141, 182, 'Wednesday', '08:00:00', '17:00:00'),
+(142, 183, 'Tuesday', '09:00:00', '15:00:00'),
+(143, 183, 'Thursday', '09:00:00', '15:00:00'),
+(144, 184, 'Monday', '08:00:00', '12:00:00'),
+(145, 184, 'Wednesday', '08:00:00', '12:00:00'),
+(146, 184, 'Friday', '08:00:00', '12:00:00'),
+(147, 185, 'Monday', '10:00:00', '16:00:00'),
+(148, 185, 'Tuesday', '10:00:00', '16:00:00'),
+(149, 185, 'Thursday', '10:00:00', '16:00:00'),
+(150, 186, 'Monday', '09:00:00', '17:00:00'),
+(151, 186, 'Wednesday', '09:00:00', '17:00:00'),
+(152, 187, 'Tuesday', '13:00:00', '17:00:00'),
+(153, 187, 'Thursday', '13:00:00', '17:00:00'),
+(154, 188, 'Monday', '08:00:00', '12:00:00'),
+(155, 188, 'Tuesday', '08:00:00', '12:00:00'),
+(156, 188, 'Friday', '08:00:00', '12:00:00'),
+(157, 189, 'Wednesday', '10:00:00', '17:00:00'),
+(158, 189, 'Thursday', '10:00:00', '17:00:00'),
+(159, 190, 'Monday', '13:00:00', '18:00:00'),
+(160, 190, 'Wednesday', '13:00:00', '18:00:00'),
+(161, 191, 'Tuesday', '08:00:00', '16:00:00'),
+(162, 191, 'Thursday', '08:00:00', '16:00:00'),
+(163, 192, 'Monday', '08:00:00', '17:00:00'),
+(164, 192, 'Thursday', '08:00:00', '17:00:00'),
+(165, 193, 'Tuesday', '10:00:00', '17:00:00'),
+(166, 193, 'Friday', '10:00:00', '17:00:00'),
+(167, 194, 'Wednesday', '08:00:00', '12:00:00'),
+(168, 194, 'Friday', '13:00:00', '17:00:00'),
+(169, 195, 'Monday', '10:00:00', '17:00:00'),
+(170, 195, 'Wednesday', '10:00:00', '17:00:00'),
+(171, 196, 'Tuesday', '08:00:00', '12:00:00'),
+(172, 196, 'Thursday', '08:00:00', '12:00:00'),
+(173, 197, 'Monday', '13:00:00', '17:00:00'),
+(174, 197, 'Tuesday', '13:00:00', '17:00:00'),
+(175, 197, 'Thursday', '13:00:00', '17:00:00'),
+(176, 198, 'Wednesday', '08:00:00', '16:00:00'),
+(177, 198, 'Friday', '08:00:00', '16:00:00'),
+(178, 199, 'Monday', '08:00:00', '12:00:00'),
+(179, 199, 'Thursday', '08:00:00', '12:00:00'),
+(180, 200, 'Tuesday', '09:00:00', '17:00:00'),
+(181, 200, 'Wednesday', '09:00:00', '17:00:00'),
+(182, 201, 'Monday', '09:00:00', '12:00:00'),
+(183, 201, 'Wednesday', '09:00:00', '12:00:00'),
+(184, 201, 'Friday', '09:00:00', '12:00:00');
 
 --
 -- Indexes for dumped tables
@@ -926,67 +1031,67 @@ ALTER TABLE `teacher_availability`
 -- AUTO_INCREMENT for table `assignments`
 --
 ALTER TABLE `assignments`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=82;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=132;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=138;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=196;
 
 --
 -- AUTO_INCREMENT for table `historical_analytics_metadata`
 --
 ALTER TABLE `historical_analytics_metadata`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `historical_assignments`
 --
 ALTER TABLE `historical_assignments`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `historical_schedules`
 --
 ALTER TABLE `historical_schedules`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=98;
 
 --
 -- AUTO_INCREMENT for table `historical_subjects`
 --
 ALTER TABLE `historical_subjects`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=91;
 
 --
 -- AUTO_INCREMENT for table `historical_teachers`
 --
 ALTER TABLE `historical_teachers`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=95;
 
 --
 -- AUTO_INCREMENT for table `schedules`
 --
 ALTER TABLE `schedules`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=113;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=121;
 
 --
 -- AUTO_INCREMENT for table `subjects`
 --
 ALTER TABLE `subjects`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=181;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=256;
 
 --
 -- AUTO_INCREMENT for table `teachers`
 --
 ALTER TABLE `teachers`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=142;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=202;
 
 --
 -- AUTO_INCREMENT for table `teacher_availability`
 --
 ALTER TABLE `teacher_availability`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=185;
 
 --
 -- Constraints for dumped tables
