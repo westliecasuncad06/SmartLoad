@@ -30,6 +30,10 @@ function closeSidebar() {
 function toggleMobileSearch() {
     const bar = document.getElementById('mobileSearchBar');
     bar.classList.toggle('hidden');
+    if (!bar.classList.contains('hidden')) {
+        const input = document.getElementById('mobileSearchInput');
+        if (input) input.focus();
+    }
 }
 
 // Auto-close sidebar on resize to desktop
@@ -3277,27 +3281,158 @@ function updateSelection(results) {
 function selectSearchResult(result) {
     hideSearchDropdown();
     const searchInput = document.getElementById('globalSearch');
-    searchInput.value = result.title;
+    const mobileInput = document.getElementById('mobileSearchInput');
+    if (searchInput) searchInput.value = result.title;
+    if (mobileInput) mobileInput.value = result.title;
 
-    // Navigate to relevant page or highlight
+    // Navigate to relevant page and trigger page-level search
     if (result.type === 'teacher') {
         switchPage('teachers');
+        setTimeout(() => {
+            const teacherSearch = document.getElementById('teacherSearch');
+            if (teacherSearch) {
+                teacherSearch.value = result.title;
+                teacherSearch.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, 100);
     } else if (result.type === 'subject') {
         switchPage('subjects');
+        setTimeout(() => {
+            const subjectSearch = document.getElementById('subjectSearch');
+            if (subjectSearch) {
+                subjectSearch.value = result.title;
+                subjectSearch.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, 100);
     }
 
-    // Highlight row
+    // Highlight row on dashboard
     highlightDashboardResults(result.title);
 }
 
 function hideSearchDropdown() {
     const dropdown = document.getElementById('searchResultsDropdown');
-    dropdown.classList.add('hidden');
+    const mobileDropdown = document.getElementById('mobileSearchResultsDropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+    if (mobileDropdown) mobileDropdown.classList.add('hidden');
     selectedResultIndex = -1;
     currentSearchResults = [];
 }
 
-// Initialize on DOM ready (handled below to avoid double init)
+// --------------------------------------------------
+// Mobile Search Wiring
+// --------------------------------------------------
+function initializeMobileSearch() {
+    const mobileInput = document.getElementById('mobileSearchInput');
+    const dropdown = document.getElementById('mobileSearchResultsDropdown');
+    const resultsList = document.getElementById('mobileSearchResultsList');
+    const loadingEl = document.getElementById('mobileSearchLoading');
+    const noResultsEl = document.getElementById('mobileSearchNoResults');
+
+    if (!mobileInput || !dropdown || !resultsList || !loadingEl || !noResultsEl) return;
+
+    let mobileSearchTimeout = null;
+
+    mobileInput.addEventListener('input', () => {
+        if (mobileSearchTimeout) clearTimeout(mobileSearchTimeout);
+        mobileSearchTimeout = setTimeout(() => performMobileSearch(mobileInput.value.trim()), 250);
+    });
+
+    mobileInput.addEventListener('focus', () => {
+        if (currentSearchResults.length > 0) {
+            dropdown.classList.remove('hidden');
+        }
+    });
+
+    mobileInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            hideSearchDropdown();
+            mobileInput.blur();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!mobileInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    async function performMobileSearch(query) {
+        if (query.length < 2) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        resultsList.innerHTML = '';
+        loadingEl.classList.remove('hidden');
+        noResultsEl.classList.add('hidden');
+        dropdown.classList.remove('hidden');
+
+        if (searchAbortController) searchAbortController.abort();
+        searchAbortController = new AbortController();
+
+        try {
+            const [teachersRes, subjectsRes] = await Promise.allSettled([
+                fetch(`api/filter_teachers.php?search=${encodeURIComponent(query)}`, { signal: searchAbortController.signal }),
+                fetch(`api/filter_subjects.php?search=${encodeURIComponent(query)}`, { signal: searchAbortController.signal })
+            ]);
+
+            currentSearchResults = [];
+
+            if (teachersRes.status === 'fulfilled' && teachersRes.value.ok) {
+                const data = await teachersRes.value.json();
+                if (data.status === 'success') {
+                    currentSearchResults.push(...data.teachers.slice(0, 5).map(t => ({
+                        id: t.id, type: 'teacher', title: t.name,
+                        subtitle: t.type + ' • ' + (t.expertise_tags || 'No expertise'), data: t
+                    })));
+                }
+            }
+
+            if (subjectsRes.status === 'fulfilled' && subjectsRes.value.ok) {
+                const data = await subjectsRes.value.json();
+                if (data.status === 'success') {
+                    currentSearchResults.push(...data.subjects.slice(0, 5).map(s => ({
+                        id: s.id, type: 'subject', title: s.course_code + ' - ' + s.name,
+                        subtitle: s.program + ' (' + s.units + ' units)', data: s
+                    })));
+                }
+            }
+
+            loadingEl.classList.add('hidden');
+            resultsList.innerHTML = '';
+
+            if (currentSearchResults.length === 0) {
+                noResultsEl.classList.remove('hidden');
+                return;
+            }
+
+            noResultsEl.classList.add('hidden');
+            currentSearchResults.forEach(result => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-r ${result.type === 'teacher' ? 'from-indigo-500 to-blue-600' : 'from-emerald-500 to-teal-600'} rounded-lg flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
+                            ${result.type === 'teacher' ? initialsFromName(result.title) : result.title.charAt(0)}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium text-slate-900 truncate">${escapeHtml(result.title)}</div>
+                            <div class="search-result-type text-indigo-600">${result.type.charAt(0).toUpperCase() + result.type.slice(1)}</div>
+                            <div class="search-result-preview truncate">${escapeHtml(result.subtitle)}</div>
+                        </div>
+                    </div>
+                `;
+                item.addEventListener('click', () => selectSearchResult(result));
+                resultsList.appendChild(item);
+            });
+
+        } catch (err) {
+            if (err.name !== 'AbortError') console.error('Mobile search failed:', err);
+            loadingEl.classList.add('hidden');
+        }
+    }
+}
 
 // --------------------------------------------------
 // Keyboard Shortcuts
@@ -3315,9 +3450,13 @@ document.addEventListener('keydown', (e) => {
 
 // Initialize search when document is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeGlobalSearch);
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeGlobalSearch();
+        initializeMobileSearch();
+    });
 } else {
     initializeGlobalSearch();
+    initializeMobileSearch();
 }
 
 // --------------------------------------------------

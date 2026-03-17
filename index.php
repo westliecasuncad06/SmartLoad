@@ -283,6 +283,16 @@ try {
                             <input type="text" id="globalSearch" placeholder="Search teachers, subjects, schedules..." class="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                             <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
                             <kbd class="absolute right-3 top-2 px-2 py-0.5 text-xs bg-slate-100 text-slate-500 rounded hidden md:inline">Ctrl+K</kbd>
+                            <!-- Search Results Dropdown -->
+                            <div id="searchResultsDropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-96 overflow-y-auto">
+                                <div id="searchLoading" class="hidden p-4 text-center text-slate-500 text-sm">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>Searching...
+                                </div>
+                                <div id="searchResultsList"></div>
+                                <div id="searchNoResults" class="hidden p-4 text-center text-slate-400 text-sm">
+                                    <i class="fas fa-search mr-2"></i>No results found
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -309,8 +319,18 @@ try {
                 <!-- Mobile search bar (hidden by default) -->
                 <div id="mobileSearchBar" class="hidden sm:hidden px-3 pb-3">
                     <div class="relative">
-                        <input type="text" placeholder="Search..." class="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                        <input type="text" id="mobileSearchInput" placeholder="Search..." class="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
                         <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
+                        <!-- Mobile Search Results Dropdown -->
+                        <div id="mobileSearchResultsDropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
+                            <div id="mobileSearchLoading" class="hidden p-4 text-center text-slate-500 text-sm">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Searching...
+                            </div>
+                            <div id="mobileSearchResultsList"></div>
+                            <div id="mobileSearchNoResults" class="hidden p-4 text-center text-slate-400 text-sm">
+                                <i class="fas fa-search mr-2"></i>No results found
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
