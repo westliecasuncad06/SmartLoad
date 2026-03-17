@@ -9,8 +9,19 @@ try {
     $totalSubjects    = $pdo->query("SELECT COUNT(*) FROM subjects")->fetchColumn();
     $totalUnits       = $pdo->query("SELECT COALESCE(SUM(units), 0) FROM subjects")->fetchColumn();
     $assignedSubjects = $pdo->query("SELECT COUNT(DISTINCT subject_id) FROM assignments")->fetchColumn();
+    $unassignedCount  = (int)$totalSubjects - (int)$assignedSubjects;
     $overloadCount    = $pdo->query("SELECT COUNT(*) FROM teachers WHERE is_archived = 0 AND current_units > max_units")->fetchColumn();
     $recentLogs       = $pdo->query("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 10")->fetchAll();
+
+    // Last generation timestamp
+    $lastGenRow = $pdo->query("SELECT created_at FROM audit_logs WHERE action_type = 'Schedule Generation' ORDER BY created_at DESC LIMIT 1")->fetch();
+    $lastGenTime = $lastGenRow ? date('M j, g:i A', strtotime($lastGenRow['created_at'])) : null;
+
+    // Policy settings for dynamic bar
+    $policyRow = $pdo->query("SELECT * FROM policy_settings ORDER BY id DESC LIMIT 1")->fetch();
+    $policyMaxLoad        = $policyRow ? (int)$policyRow['max_teaching_load'] : 18;
+    $policyExpertiseWeight = $policyRow ? (int)$policyRow['expertise_weight'] : 70;
+    $policyAvailWeight     = $policyRow ? (int)$policyRow['availability_weight'] : 30;
 } catch (PDOException $e) {
     // Use fallback values when DB is not yet set up
     $totalTeachers    = 0;
@@ -19,8 +30,13 @@ try {
     $totalSubjects    = 0;
     $totalUnits       = 0;
     $assignedSubjects = 0;
+    $unassignedCount  = 0;
     $overloadCount    = 0;
     $recentLogs       = [];
+    $lastGenTime      = null;
+    $policyMaxLoad    = 18;
+    $policyExpertiseWeight = 70;
+    $policyAvailWeight     = 30;
 }
 
 // Fetch load assignment report data (teachers with assignments + unassigned subjects)
@@ -283,6 +299,16 @@ try {
                             <input type="text" id="globalSearch" placeholder="Search teachers, subjects, schedules..." class="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                             <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
                             <kbd class="absolute right-3 top-2 px-2 py-0.5 text-xs bg-slate-100 text-slate-500 rounded hidden md:inline">Ctrl+K</kbd>
+                            <!-- Search Results Dropdown -->
+                            <div id="searchResultsDropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-96 overflow-y-auto">
+                                <div id="searchLoading" class="hidden p-4 text-center text-slate-500 text-sm">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>Searching...
+                                </div>
+                                <div id="searchResultsList"></div>
+                                <div id="searchNoResults" class="hidden p-4 text-center text-slate-400 text-sm">
+                                    <i class="fas fa-search mr-2"></i>No results found
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -347,8 +373,18 @@ try {
                 <!-- Mobile search bar (hidden by default) -->
                 <div id="mobileSearchBar" class="hidden sm:hidden px-3 pb-3">
                     <div class="relative">
-                        <input type="text" placeholder="Search..." class="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                        <input type="text" id="mobileSearchInput" placeholder="Search..." class="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
                         <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
+                        <!-- Mobile Search Results Dropdown -->
+                        <div id="mobileSearchResultsDropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
+                            <div id="mobileSearchLoading" class="hidden p-4 text-center text-slate-500 text-sm">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Searching...
+                            </div>
+                            <div id="mobileSearchResultsList"></div>
+                            <div id="mobileSearchNoResults" class="hidden p-4 text-center text-slate-400 text-sm">
+                                <i class="fas fa-search mr-2"></i>No results found
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -360,11 +396,26 @@ try {
                 <div id="page-dashboard" class="page-content p-4 sm:p-6 space-y-6">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
-                            <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Load Assignment Dashboard</h2>
-                            <p class="text-slate-600 mt-1 text-sm">Automatically assign teachers to subjects based on expertise and availability</p>
+                            <h2 class="text-xl sm:text-2xl font-bold text-slate-900">
+                                <?php
+                                    $hour = (int)date('G');
+                                    if ($hour < 12) $greeting = 'Good Morning';
+                                    elseif ($hour < 17) $greeting = 'Good Afternoon';
+                                    else $greeting = 'Good Evening';
+                                ?>
+                                <?= $greeting ?>, Program Chair
+                            </h2>
+                            <p class="text-slate-600 mt-1 text-sm">Here's your faculty load assignment overview for <span class="font-medium text-slate-700"><?= date('F j, Y') ?></span></p>
                         </div>
                         <div class="flex items-center gap-3">
-                            <span class="text-sm text-slate-500 hidden sm:inline">Last generated: <span class="font-medium text-slate-700">Today, 2:45 PM</span></span>
+                            <?php if ($lastGenTime): ?>
+                            <span class="text-sm text-slate-500 hidden sm:inline">
+                                <i class="fas fa-clock text-slate-400 mr-1"></i>
+                                Last generated: <span class="font-medium text-slate-700"><?= htmlspecialchars($lastGenTime) ?></span>
+                            </span>
+                            <?php else: ?>
+                            <span class="text-sm text-slate-400 hidden sm:inline italic">No schedule generated yet</span>
+                            <?php endif; ?>
                             <button onclick="openHistoryModal()" class="flex items-center gap-2 px-3 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm">
                                 <i class="fas fa-clock-rotate-left"></i>
                                 History
@@ -374,37 +425,118 @@ try {
 
                     <!-- QUICK STATS -->
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                        <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200">
+                        <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200 cursor-pointer" onclick="switchPage('teachers')">
                             <div class="flex items-center justify-between">
                                 <div class="bg-indigo-100 p-2.5 rounded-lg"><i class="fas fa-users text-indigo-600"></i></div>
-                                <span class="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">+3 new</span>
+                                <span class="text-xs text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded-full" title="Full-time / Part-time">
+                                    <?= (int)$fullTimeCount ?> FT / <?= (int)$partTimeCount ?> PT
+                                </span>
                             </div>
-                            <p class="text-2xl font-bold text-slate-900 mt-3"><?php echo (int)$totalTeachers; ?></p>
-                            <p class="text-slate-500 text-sm">Total Teachers</p>
+                            <p class="text-2xl font-bold text-slate-900 mt-3"><?= (int)$totalTeachers ?></p>
+                            <p class="text-slate-500 text-sm">Total Faculty</p>
+                            <div class="mt-2 flex gap-1">
+                                <?php if ((int)$totalTeachers > 0): ?>
+                                <div class="h-1 rounded-full bg-indigo-500" style="width:<?= round(((int)$fullTimeCount / (int)$totalTeachers) * 100) ?>%"></div>
+                                <div class="h-1 rounded-full bg-indigo-200" style="width:<?= round(((int)$partTimeCount / (int)$totalTeachers) * 100) ?>%"></div>
+                                <?php else: ?>
+                                <div class="h-1 rounded-full bg-slate-200 w-full"></div>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200">
+                        <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200 cursor-pointer" onclick="switchPage('subjects')">
                             <div class="flex items-center justify-between">
                                 <div class="bg-blue-100 p-2.5 rounded-lg"><i class="fas fa-book-open text-blue-600"></i></div>
-                                <span class="text-xs text-slate-500 font-medium"><?php echo (int)$totalUnits; ?> units</span>
+                                <span class="text-xs text-slate-500 font-medium"><?= (int)$totalUnits ?> total units</span>
                             </div>
-                            <p class="text-2xl font-bold text-slate-900 mt-3"><?php echo (int)$totalSubjects; ?></p>
+                            <p class="text-2xl font-bold text-slate-900 mt-3"><?= (int)$totalSubjects ?></p>
                             <p class="text-slate-500 text-sm">Total Subjects</p>
+                            <?php if ((int)$unassignedCount > 0): ?>
+                            <p class="text-xs text-amber-600 mt-2"><i class="fas fa-circle-exclamation mr-1"></i><?= (int)$unassignedCount ?> pending assignment</p>
+                            <?php else: ?>
+                            <p class="text-xs text-green-600 mt-2"><i class="fas fa-circle-check mr-1"></i>All assigned</p>
+                            <?php endif; ?>
                         </div>
                         <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200">
                             <div class="flex items-center justify-between">
                                 <div class="bg-green-100 p-2.5 rounded-lg"><i class="fas fa-circle-check text-green-600"></i></div>
-                                <span class="text-xs text-green-600 font-medium"><?php echo $totalSubjects > 0 ? round(($assignedSubjects / $totalSubjects) * 100) : 0; ?>%</span>
+                                <span class="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full"><?= $totalSubjects > 0 ? round(($assignedSubjects / $totalSubjects) * 100) : 0 ?>%</span>
                             </div>
-                            <p class="text-2xl font-bold text-slate-900 mt-3"><?php echo (int)$assignedSubjects; ?></p>
+                            <p class="text-2xl font-bold text-slate-900 mt-3"><?= (int)$assignedSubjects ?><span class="text-base font-normal text-slate-400"> / <?= (int)$totalSubjects ?></span></p>
                             <p class="text-slate-500 text-sm">Subjects Assigned</p>
-                        </div>
-                        <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200">
-                            <div class="flex items-center justify-between">
-                                <div class="bg-amber-100 p-2.5 rounded-lg"><i class="fas fa-triangle-exclamation text-amber-600"></i></div>
-                                <span class="text-xs text-amber-600 font-medium">Needs review</span>
+                            <div class="mt-2 w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-green-500 rounded-full transition-all" style="width:<?= $totalSubjects > 0 ? round(($assignedSubjects / $totalSubjects) * 100) : 0 ?>%"></div>
                             </div>
-                            <p class="text-2xl font-bold text-amber-600 mt-3"><?php echo (int)$overloadCount; ?></p>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 border <?= (int)$overloadCount > 0 ? 'border-red-200 bg-red-50/30' : 'border-slate-200' ?>">
+                            <div class="flex items-center justify-between">
+                                <div class="<?= (int)$overloadCount > 0 ? 'bg-red-100' : 'bg-amber-100' ?> p-2.5 rounded-lg">
+                                    <i class="fas fa-triangle-exclamation <?= (int)$overloadCount > 0 ? 'text-red-600' : 'text-amber-600' ?>"></i>
+                                </div>
+                                <?php if ((int)$overloadCount > 0): ?>
+                                <span class="text-xs text-red-600 font-medium bg-red-50 px-2 py-0.5 rounded-full animate-pulse">Action needed</span>
+                                <?php else: ?>
+                                <span class="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">All clear</span>
+                                <?php endif; ?>
+                            </div>
+                            <p class="text-2xl font-bold <?= (int)$overloadCount > 0 ? 'text-red-600' : 'text-slate-900' ?> mt-3"><?= (int)$overloadCount ?></p>
                             <p class="text-slate-500 text-sm">Overload Flags</p>
+                        </div>
+                    </div>
+
+                    <!-- FACULTY UTILIZATION OVERVIEW -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-semibold text-slate-900">Faculty Load Distribution</h3>
+                                <button onclick="switchPage('loadreports')" class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">View Full Report <i class="fas fa-arrow-right ml-1"></i></button>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4 mb-4">
+                                <div class="text-center p-3 bg-slate-50 rounded-lg">
+                                    <p class="text-lg font-bold text-slate-900"><?= $avgLoad ?></p>
+                                    <p class="text-xs text-slate-500">Avg. Load (units)</p>
+                                </div>
+                                <div class="text-center p-3 bg-slate-50 rounded-lg">
+                                    <p class="text-lg font-bold text-slate-900"><?= $availableUnits >= 0 ? $availableUnits : 0 ?></p>
+                                    <p class="text-xs text-slate-500">Available Units</p>
+                                </div>
+                                <div class="text-center p-3 bg-slate-50 rounded-lg">
+                                    <p class="text-lg font-bold <?= $utilization > 90 ? 'text-red-600' : ($utilization > 75 ? 'text-amber-600' : 'text-green-600') ?>"><?= $utilization ?>%</p>
+                                    <p class="text-xs text-slate-500">Utilization Rate</p>
+                                </div>
+                            </div>
+                            <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all <?= $utilization > 90 ? 'bg-red-500' : ($utilization > 75 ? 'bg-amber-500' : 'bg-green-500') ?>" style="width:<?= min(100, $utilization) ?>%"></div>
+                            </div>
+                            <div class="flex justify-between mt-1">
+                                <span class="text-xs text-slate-400">0%</span>
+                                <span class="text-xs text-slate-400">Capacity: <?= (int)$totalMaxUnits ?> units</span>
+                                <span class="text-xs text-slate-400">100%</span>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                            <h3 class="text-sm font-semibold text-slate-900 mb-4">Quick Actions</h3>
+                            <div class="space-y-2">
+                                <button onclick="document.getElementById('teacherUpload').click()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 bg-slate-50 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left">
+                                    <i class="fas fa-cloud-arrow-up w-5 text-center text-indigo-500"></i>
+                                    <span>Upload Data Files</span>
+                                    <i class="fas fa-chevron-right ml-auto text-xs text-slate-400"></i>
+                                </button>
+                                <button onclick="switchPage('teachers')" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 bg-slate-50 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left">
+                                    <i class="fas fa-user-plus w-5 text-center text-indigo-500"></i>
+                                    <span>Manage Teachers</span>
+                                    <i class="fas fa-chevron-right ml-auto text-xs text-slate-400"></i>
+                                </button>
+                                <button onclick="switchPage('subjects')" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 bg-slate-50 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left">
+                                    <i class="fas fa-book-open w-5 text-center text-indigo-500"></i>
+                                    <span>Manage Subjects</span>
+                                    <i class="fas fa-chevron-right ml-auto text-xs text-slate-400"></i>
+                                </button>
+                                <button onclick="openSettingsModal()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 bg-slate-50 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left">
+                                    <i class="fas fa-sliders w-5 text-center text-indigo-500"></i>
+                                    <span>Policy Settings</span>
+                                    <i class="fas fa-chevron-right ml-auto text-xs text-slate-400"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -570,11 +702,11 @@ try {
                         <div class="px-4 sm:px-6 py-3 bg-indigo-700/50 flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-indigo-100">
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-scale-balanced"></i>
-                                <span>Priority: <strong class="text-white">Expertise (70%) → Availability (30%)</strong></span>
+                                <span>Priority: <strong class="text-white">Expertise (<?= (int)$policyExpertiseWeight ?>%) → Availability (<?= (int)$policyAvailWeight ?>%)</strong></span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-weight-scale"></i>
-                                <span>Max Load: <strong class="text-white">18 units</strong></span>
+                                <span>Max Load: <strong class="text-white"><?= (int)$policyMaxLoad ?> units</strong></span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-shield-check"></i>
@@ -656,15 +788,30 @@ try {
                                     ?>
                                     <tr>
                                         <td colspan="9" class="px-6 py-16 text-center">
-                                            <div class="flex flex-col items-center gap-3">
-                                                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
-                                                    <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+                                            <div class="flex flex-col items-center gap-4">
+                                                <div class="w-20 h-20 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-full flex items-center justify-center">
+                                                    <i class="fas fa-wand-magic-sparkles text-indigo-400 text-3xl"></i>
                                                 </div>
-                                                <p class="text-lg font-semibold text-slate-600">No load assignments yet</p>
-                                                <p class="text-sm text-slate-400 max-w-sm">Upload teacher profiles, subject catalog, and schedules, then generate a schedule to see load assignments here.</p>
-                                                <button onclick="document.getElementById('teacherUpload').click()" class="mt-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
-                                                    <i class="fas fa-bolt"></i> Get Started
-                                                </button>
+                                                <div>
+                                                    <p class="text-lg font-semibold text-slate-700">No load assignments yet</p>
+                                                    <p class="text-sm text-slate-400 max-w-md mt-1">Follow the steps above to get started: upload your CSV files, then click "Generate Schedule" to auto-assign teachers.</p>
+                                                </div>
+                                                <div class="flex items-center gap-4 sm:gap-6 mt-2 text-xs text-slate-400">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-[10px]">1</span>
+                                                        <span>Upload Files</span>
+                                                    </div>
+                                                    <i class="fas fa-arrow-right text-slate-300"></i>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-[10px]">2</span>
+                                                        <span>Generate</span>
+                                                    </div>
+                                                    <i class="fas fa-arrow-right text-slate-300"></i>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-[10px]">3</span>
+                                                        <span>Review</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -893,39 +1040,70 @@ try {
                         <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <i class="fas fa-clock-rotate-left text-slate-400"></i>
-                                <h3 class="text-lg font-semibold text-slate-900">Recent Activity (Audit Trail)</h3>
+                                <h3 class="text-lg font-semibold text-slate-900">Recent Activity</h3>
+                                <?php if (!empty($recentLogs)): ?>
+                                <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full"><?= count($recentLogs) ?> latest</span>
+                                <?php endif; ?>
                             </div>
-                            <button onclick="switchPage('audittrail')" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">View All</button>
+                            <button onclick="switchPage('audittrail')" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">View All <i class="fas fa-arrow-right text-xs ml-1"></i></button>
                         </div>
                         <div class="divide-y divide-slate-100">
-                            <div class="px-6 py-4 flex items-start gap-4">
-                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0"><i class="fas fa-bolt text-green-600 text-xs"></i></div>
-                                <div class="flex-1">
-                                    <p class="text-sm text-slate-900"><span class="font-medium">Schedule Generated</span> - 156 subjects assigned to 42 teachers</p>
-                                    <p class="text-xs text-slate-500 mt-1">Today at 2:45 PM • Generated in 2.3 seconds • 0 conflicts</p>
+                            <?php if (empty($recentLogs)): ?>
+                            <div class="px-6 py-10 text-center">
+                                <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-clock text-slate-400 text-lg"></i>
+                                </div>
+                                <p class="text-sm text-slate-500">No activity recorded yet</p>
+                                <p class="text-xs text-slate-400 mt-1">Upload files and generate a schedule to see activity here</p>
+                            </div>
+                            <?php else: ?>
+                            <?php foreach (array_slice($recentLogs, 0, 5) as $log):
+                                $actionType = $log['action_type'] ?? '';
+                                $logDesc    = $log['description'] ?? '';
+                                $logUser    = $log['user'] ?? 'System';
+                                $logTime    = isset($log['created_at']) ? date('M j, g:i A', strtotime($log['created_at'])) : '';
+
+                                // Determine icon and color based on action type
+                                switch ($actionType) {
+                                    case 'Schedule Generation':
+                                        $iconBg    = 'bg-green-100';
+                                        $iconClass = 'fas fa-bolt text-green-600';
+                                        break;
+                                    case 'Manual Override':
+                                        $iconBg    = 'bg-purple-100';
+                                        $iconClass = 'fas fa-user-pen text-purple-600';
+                                        break;
+                                    case 'File Upload':
+                                        $iconBg    = 'bg-blue-100';
+                                        $iconClass = 'fas fa-file-arrow-up text-blue-600';
+                                        break;
+                                    case 'Overload Warning':
+                                        $iconBg    = 'bg-amber-100';
+                                        $iconClass = 'fas fa-triangle-exclamation text-amber-600';
+                                        break;
+                                    case 'Analytics Update':
+                                        $iconBg    = 'bg-cyan-100';
+                                        $iconClass = 'fas fa-chart-line text-cyan-600';
+                                        break;
+                                    case 'Settings Changed':
+                                        $iconBg    = 'bg-slate-100';
+                                        $iconClass = 'fas fa-sliders text-slate-600';
+                                        break;
+                                    default:
+                                        $iconBg    = 'bg-slate-100';
+                                        $iconClass = 'fas fa-circle-info text-slate-500';
+                                        break;
+                                }
+                            ?>
+                            <div class="px-6 py-3.5 flex items-start gap-4 hover:bg-slate-50 transition-colors">
+                                <div class="w-8 h-8 <?= $iconBg ?> rounded-full flex items-center justify-center flex-shrink-0"><i class="<?= $iconClass ?> text-xs"></i></div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm text-slate-900 truncate"><span class="font-medium"><?= htmlspecialchars($actionType) ?></span> — <?= htmlspecialchars(mb_strimwidth($logDesc, 0, 100, '...')) ?></p>
+                                    <p class="text-xs text-slate-500 mt-0.5"><?= htmlspecialchars($logTime) ?> • By: <?= htmlspecialchars($logUser) ?></p>
                                 </div>
                             </div>
-                            <div class="px-6 py-4 flex items-start gap-4">
-                                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0"><i class="fas fa-user-pen text-purple-600 text-xs"></i></div>
-                                <div class="flex-1">
-                                    <p class="text-sm text-slate-900"><span class="font-medium">Manual Override</span> - ENG102 reassigned from John Doe to Maria Garcia</p>
-                                    <p class="text-xs text-slate-500 mt-1">Today at 2:50 PM • By: Program Chair • Reason: "Teacher request due to schedule preference"</p>
-                                </div>
-                            </div>
-                            <div class="px-6 py-4 flex items-start gap-4">
-                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0"><i class="fas fa-file-arrow-up text-blue-600 text-xs"></i></div>
-                                <div class="flex-1">
-                                    <p class="text-sm text-slate-900"><span class="font-medium">Files Uploaded</span> - teachers.csv, subjects.csv, schedules.csv</p>
-                                    <p class="text-xs text-slate-500 mt-1">Today at 2:40 PM • By: Program Chair</p>
-                                </div>
-                            </div>
-                            <div class="px-6 py-4 flex items-start gap-4">
-                                <div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0"><i class="fas fa-triangle-exclamation text-amber-600 text-xs"></i></div>
-                                <div class="flex-1">
-                                    <p class="text-sm text-slate-900"><span class="font-medium">Overload Warning</span> - Jane Smith assigned 21 units (exceeds 18 unit policy)</p>
-                                    <p class="text-xs text-slate-500 mt-1">Today at 2:45 PM • Auto-flagged by system</p>
-                                </div>
-                            </div>
+                            <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

@@ -245,7 +245,18 @@ try {
         return ((int) ($b['unit_shortage'] ?? 0)) <=> ((int) ($a['unit_shortage'] ?? 0));
     });
 
-    json_response(200, $results);
+    // Generate AI-powered analysis if Gemini is available
+    require_once __DIR__ . '/../includes/GeminiAPI.php';
+    $ai = new GeminiEvaluator(GEMINI_API_KEY);
+    $aiAnalysis = $ai->analyzePredictions($results);
+
+    json_response(200, [
+        'subjects' => $results,
+        'ai_analysis' => $aiAnalysis,
+        'ai_enabled' => $ai->isEnabled(),
+        'total_subjects' => count($results),
+        'subjects_at_risk' => count(array_filter($results, fn($r) => ($r['hiring_required'] ?? false))),
+    ]);
 
 } catch (Throwable $e) {
     json_response(500, [

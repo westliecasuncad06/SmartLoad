@@ -70,23 +70,73 @@
 
 .sidebar-open {
     transform: translateX(0) !important;
-    /* Global Search Dropdown */
-    #searchResultsDropdown {
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        padding: 8px 0;
-    }
+}
 
-    .search-result-item {
-        transition: all 0.2s ease;
-        cursor: pointer;
-        padding: 12px 16px;
-        border-radius: 0;
-    }
+/* Global Search Dropdown */
+<<<<<<< Updated upstream
+#searchResultsDropdown,
+#mobileSearchResultsDropdown {
+=======
+#searchResultsDropdown {
+>>>>>>> Stashed changes
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    padding: 8px 0;
+}
 
-    /* Mobile touch targets */
-    @media (max-width: 640px) {
-        button, a, select {
-            min-height: 36px;
-        }
+.search-result-item {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    padding: 12px 16px;
+<<<<<<< Updated upstream
+}
+
+.search-result-item:hover,
+.search-result-item.search-highlight {
+    background-color: #f1f5f9;
+}
+
+.search-result-type {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.search-result-preview {
+    font-size: 0.8rem;
+    color: #64748b;
+=======
+    border-radius: 0;
+>>>>>>> Stashed changes
+}
+
+/* Mobile touch targets */
+@media (max-width: 640px) {
+    button, a, select {
+        min-height: 36px;
     }
 }
+
+/* Dashboard card entrance animation */
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#page-dashboard > * {
+    animation: fadeSlideUp 0.35s ease-out both;
+}
+
+#page-dashboard > *:nth-child(1) { animation-delay: 0s; }
+#page-dashboard > *:nth-child(2) { animation-delay: 0.05s; }
+#page-dashboard > *:nth-child(3) { animation-delay: 0.10s; }
+#page-dashboard > *:nth-child(4) { animation-delay: 0.15s; }
+#page-dashboard > *:nth-child(5) { animation-delay: 0.20s; }
+#page-dashboard > *:nth-child(6) { animation-delay: 0.25s; }
+#page-dashboard > *:nth-child(7) { animation-delay: 0.30s; }

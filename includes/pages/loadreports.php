@@ -143,30 +143,100 @@
 
     <!-- Predictive Analytics -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-200">
-            <h3 class="text-lg font-semibold text-slate-900">Predictive Faculty Demand Forecast</h3>
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-900"><i class="fas fa-brain text-indigo-500 mr-2"></i>Predictive Faculty Demand Forecast</h3>
+                <p class="text-sm text-slate-500 mt-0.5">AI-powered analysis of future faculty needs based on historical trends</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="predictiveAiBadge" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">
+                    <i class="fas fa-sparkles"></i> Gemini AI
+                </span>
+                <button onclick="loadPredictiveAnalytics()" class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors" title="Refresh forecast">
+                    <i class="fas fa-sync-alt mr-1"></i>Refresh
+                </button>
+            </div>
         </div>
         <div class="p-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2">
-                    <div class="relative h-80">
+            <!-- AI Executive Summary -->
+            <div id="predictiveAiSummary" class="hidden mb-6">
+                <div class="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-xl p-5">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                            <i class="fas fa-robot text-indigo-600"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-semibold text-indigo-900 mb-1">AI Analysis Summary</h4>
+                            <p id="predictiveAiSummaryText" class="text-sm text-indigo-800 leading-relaxed"></p>
+                            <p id="predictiveAiRiskOverview" class="text-sm text-indigo-700 mt-2 font-medium"></p>
+                        </div>
+                    </div>
+                    <div id="predictiveAiActions" class="hidden mt-4 pt-3 border-t border-indigo-200">
+                        <p class="text-xs font-semibold text-indigo-900 uppercase tracking-wider mb-2">Recommended Actions</p>
+                        <ul id="predictiveAiActionsList" class="space-y-1.5"></ul>
+                    </div>
+                    <div id="predictiveAiOutlook" class="mt-3 pt-3 border-t border-indigo-200">
+                        <p class="text-xs text-indigo-600"><i class="fas fa-calendar-alt mr-1"></i><span id="predictiveAiOutlookText"></span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Summary Cards -->
+            <div id="predictiveRiskCards" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                    <p class="text-3xl font-bold text-red-600" id="riskCriticalCount">0</p>
+                    <p class="text-xs text-red-500 mt-1 font-medium uppercase tracking-wider">Critical Shortage</p>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+                    <p class="text-3xl font-bold text-amber-600" id="riskAtRiskCount">0</p>
+                    <p class="text-xs text-amber-500 mt-1 font-medium uppercase tracking-wider">At Risk</p>
+                </div>
+                <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                    <p class="text-3xl font-bold text-green-600" id="riskSafeCount">0</p>
+                    <p class="text-xs text-green-500 mt-1 font-medium uppercase tracking-wider">Within Capacity</p>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Multi-Subject Demand Chart -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-5">
+                    <h4 class="text-sm font-semibold text-slate-700 mb-3"><i class="fas fa-chart-bar text-indigo-500 mr-1.5"></i>Subject Demand vs Capacity</h4>
+                    <div class="relative h-72">
                         <canvas id="predictiveChart"></canvas>
                     </div>
                 </div>
-                <div>
-                    <div id="predictiveInsight" class="bg-amber-50 text-amber-800 border border-amber-200 rounded-lg p-4 text-sm">
-                        Loading predictions...
+                <!-- Risk Distribution Doughnut -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-5">
+                    <h4 class="text-sm font-semibold text-slate-700 mb-3"><i class="fas fa-chart-pie text-amber-500 mr-1.5"></i>Risk Distribution</h4>
+                    <div class="relative h-72">
+                        <canvas id="predictiveRiskChart"></canvas>
                     </div>
+                </div>
+            </div>
+
+            <!-- Trend Line Chart -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6">
+                <h4 class="text-sm font-semibold text-slate-700 mb-3"><i class="fas fa-chart-line text-blue-500 mr-1.5"></i>Historical Demand Trend (Units)</h4>
+                <div class="relative h-64">
+                    <canvas id="predictiveTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Insight Panel -->
+            <div>
+                <div id="predictiveInsight" class="bg-amber-50 text-amber-800 border border-amber-200 rounded-lg p-4 text-sm">
+                    Loading predictions...
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Predictive HR Insights -->
+    <!-- Forecasted Faculty Shortages Detail -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
             <div>
-                <h3 class="text-lg font-semibold text-slate-900">Forecasted Faculty Shortages (2027)</h3>
+                <h3 class="text-lg font-semibold text-slate-900"><i class="fas fa-exclamation-triangle text-amber-500 mr-2"></i>Forecasted Faculty Shortages</h3>
                 <p class="text-sm text-slate-500 mt-0.5">Based on historical sections offered and current specialized capacity</p>
             </div>
         </div>

@@ -30,6 +30,10 @@ function closeSidebar() {
 function toggleMobileSearch() {
     const bar = document.getElementById('mobileSearchBar');
     bar.classList.toggle('hidden');
+    if (!bar.classList.contains('hidden')) {
+        const input = document.getElementById('mobileSearchInput');
+        if (input) input.focus();
+    }
 }
 
 // Auto-close sidebar on resize to desktop
@@ -774,6 +778,8 @@ function initScheduleFilters() {
 // Load Reports - Predictive HR Insights
 // --------------------------------------------------
 let predictiveChartInstance = null;
+let predictiveRiskChartInstance = null;
+let predictiveTrendChartInstance = null;
 
 async function loadPredictiveAnalytics() {
     const canvas = document.getElementById('predictiveChart');
@@ -800,27 +806,80 @@ async function loadPredictiveAnalytics() {
             throw new Error(msg);
         }
 
-        if (!Array.isArray(payload) || payload.length === 0) {
+        // Support both old array format and new object format
+        const subjects = Array.isArray(payload) ? payload : (Array.isArray(payload.subjects) ? payload.subjects : []);
+        const aiAnalysis = payload.ai_analysis || null;
+        const aiEnabled = payload.ai_enabled === true;
+
+        if (subjects.length === 0) {
             hideLoadingOverlay();
             throw new Error('No predictive analytics data available.');
         }
 
-        // Use the first subject for now
-        const subject = payload[0] || {};
-        const subjectName = String(subject.subject_name || 'Unknown Subject');
-        const history = Array.isArray(subject.history) ? subject.history.map(v => Number(v)) : [];
-        const predicted = Number(subject.predicted || 0);
-        const capacity = Number(subject.capacity || 0);
-        const hiringRequired = subject.hiring_required === true;
+        // Show AI badge if enabled
+        const aiBadge = document.getElementById('predictiveAiBadge');
+        if (aiBadge) {
+            aiBadge.classList.toggle('hidden', !aiEnabled);
+        }
 
-        const labels = ['2024', '2025', '2026', '2027 (Predicted)'];
-        const hist3 = [history[0] ?? 0, history[1] ?? 0, history[2] ?? 0].map(v => Number(v) || 0);
-        const bars = [...hist3, Number(predicted) || 0];
+        // Calculate risk counts
+        let criticalCount = 0;
+        let atRiskCount = 0;
+        let safeCount = 0;
+        subjects.forEach(s => {
+            const shortage = Number(s.unit_shortage || 0);
+            if (shortage >= 12) criticalCount++;
+            else if (shortage > 0) atRiskCount++;
+            else safeCount++;
+        });
 
-        const indigo = 'rgba(99, 102, 241, 0.85)';
-        const amber = 'rgba(245, 158, 11, 0.85)';
-        const red = 'rgba(239, 68, 68, 0.9)';
-        const barColors = [indigo, indigo, indigo, amber];
+        // Update risk cards
+        const riskCards = document.getElementById('predictiveRiskCards');
+        if (riskCards) {
+            riskCards.classList.remove('hidden');
+            const critEl = document.getElementById('riskCriticalCount');
+            const riskEl = document.getElementById('riskAtRiskCount');
+            const safeEl = document.getElementById('riskSafeCount');
+            if (critEl) critEl.textContent = String(criticalCount);
+            if (riskEl) riskEl.textContent = String(atRiskCount);
+            if (safeEl) safeEl.textContent = String(safeCount);
+        }
+
+        // Show AI summary if available
+        if (aiAnalysis) {
+            const summaryDiv = document.getElementById('predictiveAiSummary');
+            const summaryText = document.getElementById('predictiveAiSummaryText');
+            const riskOverview = document.getElementById('predictiveAiRiskOverview');
+            const actionsDiv = document.getElementById('predictiveAiActions');
+            const actionsList = document.getElementById('predictiveAiActionsList');
+            const outlookText = document.getElementById('predictiveAiOutlookText');
+
+            if (summaryDiv && summaryText) {
+                summaryDiv.classList.remove('hidden');
+                summaryText.textContent = aiAnalysis.summary || '';
+                if (riskOverview) riskOverview.textContent = aiAnalysis.risk_overview || '';
+
+                if (actionsDiv && actionsList && Array.isArray(aiAnalysis.top_actions) && aiAnalysis.top_actions.length > 0) {
+                    actionsDiv.classList.remove('hidden');
+                    actionsList.innerHTML = aiAnalysis.top_actions.map(action =>
+                        '<li class="flex items-start gap-2 text-sm text-indigo-800">' +
+                        '<i class="fas fa-check-circle text-indigo-500 mt-0.5 shrink-0"></i>' +
+                        '<span>' + escapeHtml(String(action)) + '</span></li>'
+                    ).join('');
+                }
+
+                if (outlookText) outlookText.textContent = aiAnalysis.semester_outlook || '';
+            }
+        }
+
+        // --- Chart 1: Subject Demand vs Capacity (Horizontal Bar) ---
+        const topSubjects = subjects.slice(0, 10);
+        const chartLabels = topSubjects.map(s => {
+            const name = String(s.subject_name || 'Unknown');
+            return name.length > 25 ? name.substring(0, 22) + '...' : name;
+        });
+        const projectedData = topSubjects.map(s => Number(s.projected_units_needed || s.predicted || 0));
+        const capacityData = topSubjects.map(s => Number(s.total_faculty_capacity || s.capacity || 0));
 
         if (predictiveChartInstance) {
             predictiveChartInstance.destroy();
@@ -831,51 +890,236 @@ async function loadPredictiveAnalytics() {
         predictiveChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels,
+                labels: chartLabels,
                 datasets: [
                     {
-                        label: subjectName + ' Units',
-                        data: bars,
-                        backgroundColor: barColors,
-                        borderColor: barColors,
+                        label: 'Projected Demand (Units)',
+                        data: projectedData,
+                        backgroundColor: projectedData.map((v, i) => {
+                            const cap = capacityData[i] || 0;
+                            if (v - cap >= 12) return 'rgba(239, 68, 68, 0.8)';
+                            if (v > cap) return 'rgba(245, 158, 11, 0.8)';
+                            return 'rgba(99, 102, 241, 0.8)';
+                        }),
+                        borderColor: projectedData.map((v, i) => {
+                            const cap = capacityData[i] || 0;
+                            if (v - cap >= 12) return 'rgb(239, 68, 68)';
+                            if (v > cap) return 'rgb(245, 158, 11)';
+                            return 'rgb(99, 102, 241)';
+                        }),
                         borderWidth: 1,
+                        borderRadius: 4,
                     },
                     {
-                        type: 'line',
-                        label: 'Capacity',
-                        data: [capacity, capacity, capacity, capacity],
-                        borderColor: red,
+                        label: 'Faculty Capacity (Units)',
+                        data: capacityData,
+                        backgroundColor: 'rgba(34, 197, 94, 0.25)',
+                        borderColor: 'rgb(34, 197, 94)',
                         borderWidth: 2,
-                        borderDash: [6, 6],
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0,
+                        borderRadius: 4,
                     }
                 ]
             },
             options: {
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: true },
-                    tooltip: { enabled: true },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 15, font: { size: 11 } }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        padding: 12,
+                        titleFont: { size: 13 },
+                        bodyFont: { size: 12 },
+                        callbacks: {
+                            afterBody: function(items) {
+                                const idx = items[0].dataIndex;
+                                const demand = projectedData[idx];
+                                const cap = capacityData[idx];
+                                const diff = demand - cap;
+                                if (diff > 0) return 'Shortfall: ' + diff + ' units';
+                                return 'Surplus: ' + Math.abs(diff) + ' units';
+                            }
+                        }
+                    },
                 },
                 scales: {
-                    x: { grid: { display: false } },
-                    y: {
+                    x: {
                         beginAtZero: true,
-                        ticks: { precision: 0 },
+                        ticks: { precision: 0, font: { size: 11 } },
+                        grid: { color: 'rgba(148, 163, 184, 0.15)' },
+                        title: { display: true, text: 'Units', font: { size: 12, weight: '500' } }
+                    },
+                    y: {
+                        ticks: { font: { size: 11 } },
+                        grid: { display: false }
                     }
                 }
             }
         });
 
-        if (hiringRequired) {
-            const msg = `⚠️ Shortage Alert: ${subjectName} will require ${predicted} units next year, but you only have ${capacity} units of capacity. Prepare to hire!`;
+        // --- Chart 2: Risk Distribution Doughnut ---
+        const riskCanvas = document.getElementById('predictiveRiskChart');
+        if (riskCanvas) {
+            if (predictiveRiskChartInstance) {
+                predictiveRiskChartInstance.destroy();
+                predictiveRiskChartInstance = null;
+            }
+
+            const riskCtx = riskCanvas.getContext('2d');
+            predictiveRiskChartInstance = new Chart(riskCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Critical Shortage', 'At Risk', 'Within Capacity'],
+                    datasets: [{
+                        data: [criticalCount, atRiskCount, safeCount],
+                        backgroundColor: ['rgba(239, 68, 68, 0.85)', 'rgba(245, 158, 11, 0.85)', 'rgba(34, 197, 94, 0.85)'],
+                        borderColor: ['rgb(239, 68, 68)', 'rgb(245, 158, 11)', 'rgb(34, 197, 94)'],
+                        borderWidth: 2,
+                        hoverOffset: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '55%',
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: { usePointStyle: true, pointStyle: 'circle', padding: 15, font: { size: 11 } }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = criticalCount + atRiskCount + safeCount;
+                                    const pct = total > 0 ? Math.round((context.raw / total) * 100) : 0;
+                                    return context.label + ': ' + context.raw + ' subjects (' + pct + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Chart 3: Historical Demand Trend Line ---
+        const trendCanvas = document.getElementById('predictiveTrendChart');
+        if (trendCanvas) {
+            if (predictiveTrendChartInstance) {
+                predictiveTrendChartInstance.destroy();
+                predictiveTrendChartInstance = null;
+            }
+
+            // Aggregate total demand per year across all subjects
+            const yearLabels = ['Year 1', 'Year 2', 'Year 3', 'Projected'];
+            const aggregateDemand = [0, 0, 0, 0];
+            const aggregateCapacity = [0, 0, 0, 0];
+
+            subjects.forEach(s => {
+                const hist = Array.isArray(s.history) ? s.history.map(v => Number(v) || 0) : [0, 0, 0];
+                const predicted = Number(s.projected_units_needed || s.predicted || 0);
+                const cap = Number(s.total_faculty_capacity || s.capacity || 0);
+
+                const h = [hist[0] || 0, hist[1] || 0, hist[2] || 0];
+                aggregateDemand[0] += h[0];
+                aggregateDemand[1] += h[1];
+                aggregateDemand[2] += h[2];
+                aggregateDemand[3] += predicted;
+                aggregateCapacity[0] += cap;
+                aggregateCapacity[1] += cap;
+                aggregateCapacity[2] += cap;
+                aggregateCapacity[3] += cap;
+            });
+
+            const trendCtx = trendCanvas.getContext('2d');
+            predictiveTrendChartInstance = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: yearLabels,
+                    datasets: [
+                        {
+                            label: 'Total Demand (Units)',
+                            data: aggregateDemand,
+                            borderColor: 'rgb(99, 102, 241)',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: aggregateDemand.map((v, i) => i === 3 ? 'rgb(245, 158, 11)' : 'rgb(99, 102, 241)'),
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            borderWidth: 3,
+                        },
+                        {
+                            label: 'Total Capacity (Units)',
+                            data: aggregateCapacity,
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.08)',
+                            fill: true,
+                            borderDash: [6, 4],
+                            tension: 0,
+                            pointRadius: 4,
+                            pointBackgroundColor: 'rgb(34, 197, 94)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            borderWidth: 2,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { usePointStyle: true, pointStyle: 'circle', padding: 15, font: { size: 11 } }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            padding: 12,
+                            titleFont: { size: 13 },
+                            bodyFont: { size: 12 },
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(148, 163, 184, 0.15)' },
+                            ticks: { font: { size: 11 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0, font: { size: 11 } },
+                            grid: { color: 'rgba(148, 163, 184, 0.15)' },
+                            title: { display: true, text: 'Total Units', font: { size: 12, weight: '500' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Build insight message
+        const totalShortfall = subjects.reduce((sum, s) => sum + Number(s.unit_shortage || 0), 0);
+        if (criticalCount > 0 || atRiskCount > 0) {
+            const parts = [];
+            if (criticalCount > 0) parts.push(criticalCount + ' critical');
+            if (atRiskCount > 0) parts.push(atRiskCount + ' at risk');
+            const msg = '⚠️ Faculty Demand Alert: ' + parts.join(', ') + ' subject(s) identified with projected shortfall of ' + totalShortfall + ' total units. Immediate planning recommended.';
             insightEl.innerHTML = '<strong>' + escapeHtml(msg) + '</strong>';
+            insightEl.className = 'bg-red-50 text-red-800 border border-red-200 rounded-lg p-4 text-sm';
         } else {
-            const msg = `${subjectName} is within capacity based on current forecast.`;
+            const msg = '✅ All ' + subjects.length + ' subjects are within current faculty capacity based on the forecast. Continue monitoring trends.';
             insightEl.innerHTML = escapeHtml(msg);
+            insightEl.className = 'bg-green-50 text-green-800 border border-green-200 rounded-lg p-4 text-sm';
         }
         hideLoadingOverlay();
     } catch (err) {
@@ -883,8 +1127,17 @@ async function loadPredictiveAnalytics() {
             predictiveChartInstance.destroy();
             predictiveChartInstance = null;
         }
+        if (predictiveRiskChartInstance) {
+            predictiveRiskChartInstance.destroy();
+            predictiveRiskChartInstance = null;
+        }
+        if (predictiveTrendChartInstance) {
+            predictiveTrendChartInstance.destroy();
+            predictiveTrendChartInstance = null;
+        }
 
         insightEl.innerHTML = escapeHtml(err && err.message ? err.message : 'Unable to load predictions.');
+        insightEl.className = 'bg-amber-50 text-amber-800 border border-amber-200 rounded-lg p-4 text-sm';
         hideLoadingOverlay();
     }
 }
@@ -1033,13 +1286,16 @@ function initPredictiveHrInsights() {
         })
         .then((data) => {
             clearStatus();
-            if (!Array.isArray(data)) {
-                const msg = (data && data.message) ? data.message : 'Unexpected response from forecast endpoint.';
+            // Support both old array format and new object format
+            const subjects = Array.isArray(data) ? data : (Array.isArray(data.subjects) ? data.subjects : []);
+
+            if (!Array.isArray(subjects) || subjects.length === 0) {
+                const msg = (data && data.message) ? data.message : 'No forecast data available.';
                 renderError(msg);
                 return;
             }
 
-            const shortages = data.filter((row) => row && row.hiring_required === true);
+            const shortages = subjects.filter((row) => row && row.hiring_required === true);
             renderShortages(shortages);
         })
         .catch((err) => {
@@ -1510,6 +1766,51 @@ function initSmartPagination() {
         label: 'entries',
         isItemFilteredOut: (item) => String(item.dataset.filterHidden || '0') === '1',
     });
+}
+
+// --------------------------------------------------
+// Toast Notification System
+// --------------------------------------------------
+function showToast(type, title, message, durationMs = 5000) {
+    // Create container if not exists
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;';
+        document.body.appendChild(container);
+    }
+
+    const colors = {
+        success: { bg: '#f0fdf4', border: '#bbf7d0', icon: 'fa-circle-check', iconColor: '#16a34a', titleColor: '#15803d' },
+        error:   { bg: '#fef2f2', border: '#fecaca', icon: 'fa-circle-xmark', iconColor: '#dc2626', titleColor: '#b91c1c' },
+        warning: { bg: '#fffbeb', border: '#fde68a', icon: 'fa-triangle-exclamation', iconColor: '#d97706', titleColor: '#b45309' },
+        info:    { bg: '#eff6ff', border: '#bfdbfe', icon: 'fa-circle-info', iconColor: '#2563eb', titleColor: '#1d4ed8' },
+    };
+    const c = colors[type] || colors.info;
+
+    const toast = document.createElement('div');
+    toast.style.cssText = `background:${c.bg};border:1px solid ${c.border};border-radius:12px;padding:14px 18px;min-width:320px;max-width:440px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.1);display:flex;align-items:flex-start;gap:12px;pointer-events:auto;transform:translateX(120%);transition:transform 0.3s ease,opacity 0.3s ease;opacity:0;`;
+
+    toast.innerHTML = `
+        <i class="fas ${c.icon}" style="color:${c.iconColor};margin-top:2px;font-size:16px;"></i>
+        <div style="flex:1;min-width:0;">
+            <p style="font-weight:600;font-size:14px;color:${c.titleColor};margin:0;">${escapeHtml(title)}</p>
+            ${message ? `<p style="font-size:13px;color:#475569;margin:4px 0 0;line-height:1.4;">${escapeHtml(message)}</p>` : ''}
+        </div>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;padding:0;line-height:1;"><i class="fas fa-times"></i></button>
+    `;
+
+    container.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.transform = 'translateX(0)'; toast.style.opacity = '1'; });
+
+    if (durationMs > 0) {
+        setTimeout(() => {
+            toast.style.transform = 'translateX(120%)';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 350);
+        }, durationMs);
+    }
 }
 
 // --------------------------------------------------
@@ -2894,18 +3195,14 @@ async function updateHistoricalAnalytics() {
         hideLoadingOverlay();
 
         if (!response.ok || data.status !== 'success') {
-            alert('Note: ' + (data.message || 'Historical records update completed with some items not processed.'));
+            showToast('warning', 'Update Note', data.message || 'Historical records update completed with some items not processed.');
             return;
         }
 
-        alert(
-            '✅ Historical Records Updated Successfully!\n\n' +
-            'Predictive analytics has been refreshed with the uploaded historical data.\n' +
-            'You can now use this data for forecasting and trend analysis.'
-        );
+        showToast('success', 'Historical Records Updated', 'Predictive analytics refreshed with uploaded historical data.');
 
-        // Optionally reload to reflect updates
-        setTimeout(() => location.reload(), 1000);
+        // Reload to reflect updates
+        setTimeout(() => location.reload(), 1500);
 
     } catch (err) {
         btn.disabled = false;
@@ -2940,11 +3237,7 @@ async function generateSchedule() {
         if (!uploadedFiles.subject) missingFiles.push('Subjects');
         if (!uploadedFiles.schedule) missingFiles.push('Schedule');
         
-        alert(
-            '⚠️ Missing Required Files\n\n' +
-            'Please upload the following CSV files before generating a schedule:\n\n' +
-            '• ' + missingFiles.join('\n• ')
-        );
+        showToast('warning', 'Missing Required Files', 'Please upload: ' + missingFiles.join(', '));
         return;
     }
 
@@ -2971,29 +3264,24 @@ async function generateSchedule() {
         hideLoadingOverlay();
 
         if (!response.ok || data.status !== 'success') {
-            alert('Error: ' + (data.message || 'Schedule generation failed.'));
+            showToast('error', 'Generation Failed', data.message || 'Schedule generation failed.');
             return;
         }
 
         if (data.status === 'success') {
             if (data.ai_enabled === true) {
-                alert(
-                    '✨ Schedule Generated Successfully!\n\n' +
-                    `• Assigned: ${data.assigned_count}\n` +
-                    `• Unassigned: ${data.unassigned_count}\n` +
-                    `• Gemini AI Evaluations: ${data.ai_calls} calls made.`
+                showToast('success', 'Schedule Generated',
+                    `Assigned: ${data.assigned_count} | Unassigned: ${data.unassigned_count} | AI calls: ${data.ai_calls}`
                 );
             } else {
-                alert(
-                    '✅ Schedule Generated Successfully!\n\n' +
-                    `• Assigned: ${data.assigned_count}\n` +
-                    `• Unassigned: ${data.unassigned_count}`
+                showToast('success', 'Schedule Generated',
+                    `Assigned: ${data.assigned_count} | Unassigned: ${data.unassigned_count}`
                 );
             }
         }
 
         // Reload to reflect new data in the tables
-        location.reload();
+        setTimeout(() => location.reload(), 1500);
 
     } catch (err) {
         btn.disabled = false;
@@ -3002,7 +3290,7 @@ async function generateSchedule() {
         indicator.classList.remove('flex');
         hideLoadingOverlay();
 
-        alert('Network error: ' + err.message);
+        showToast('error', 'Network Error', err.message);
     }
 }
 
@@ -3277,27 +3565,158 @@ function updateSelection(results) {
 function selectSearchResult(result) {
     hideSearchDropdown();
     const searchInput = document.getElementById('globalSearch');
-    searchInput.value = result.title;
+    const mobileInput = document.getElementById('mobileSearchInput');
+    if (searchInput) searchInput.value = result.title;
+    if (mobileInput) mobileInput.value = result.title;
 
-    // Navigate to relevant page or highlight
+    // Navigate to relevant page and trigger page-level search
     if (result.type === 'teacher') {
         switchPage('teachers');
+        setTimeout(() => {
+            const teacherSearch = document.getElementById('teacherSearch');
+            if (teacherSearch) {
+                teacherSearch.value = result.title;
+                teacherSearch.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, 100);
     } else if (result.type === 'subject') {
         switchPage('subjects');
+        setTimeout(() => {
+            const subjectSearch = document.getElementById('subjectSearch');
+            if (subjectSearch) {
+                subjectSearch.value = result.title;
+                subjectSearch.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, 100);
     }
 
-    // Highlight row
+    // Highlight row on dashboard
     highlightDashboardResults(result.title);
 }
 
 function hideSearchDropdown() {
     const dropdown = document.getElementById('searchResultsDropdown');
-    dropdown.classList.add('hidden');
+    const mobileDropdown = document.getElementById('mobileSearchResultsDropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+    if (mobileDropdown) mobileDropdown.classList.add('hidden');
     selectedResultIndex = -1;
     currentSearchResults = [];
 }
 
-// Initialize on DOM ready (handled below to avoid double init)
+// --------------------------------------------------
+// Mobile Search Wiring
+// --------------------------------------------------
+function initializeMobileSearch() {
+    const mobileInput = document.getElementById('mobileSearchInput');
+    const dropdown = document.getElementById('mobileSearchResultsDropdown');
+    const resultsList = document.getElementById('mobileSearchResultsList');
+    const loadingEl = document.getElementById('mobileSearchLoading');
+    const noResultsEl = document.getElementById('mobileSearchNoResults');
+
+    if (!mobileInput || !dropdown || !resultsList || !loadingEl || !noResultsEl) return;
+
+    let mobileSearchTimeout = null;
+
+    mobileInput.addEventListener('input', () => {
+        if (mobileSearchTimeout) clearTimeout(mobileSearchTimeout);
+        mobileSearchTimeout = setTimeout(() => performMobileSearch(mobileInput.value.trim()), 250);
+    });
+
+    mobileInput.addEventListener('focus', () => {
+        if (currentSearchResults.length > 0) {
+            dropdown.classList.remove('hidden');
+        }
+    });
+
+    mobileInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            hideSearchDropdown();
+            mobileInput.blur();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!mobileInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    async function performMobileSearch(query) {
+        if (query.length < 2) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        resultsList.innerHTML = '';
+        loadingEl.classList.remove('hidden');
+        noResultsEl.classList.add('hidden');
+        dropdown.classList.remove('hidden');
+
+        if (searchAbortController) searchAbortController.abort();
+        searchAbortController = new AbortController();
+
+        try {
+            const [teachersRes, subjectsRes] = await Promise.allSettled([
+                fetch(`api/filter_teachers.php?search=${encodeURIComponent(query)}`, { signal: searchAbortController.signal }),
+                fetch(`api/filter_subjects.php?search=${encodeURIComponent(query)}`, { signal: searchAbortController.signal })
+            ]);
+
+            currentSearchResults = [];
+
+            if (teachersRes.status === 'fulfilled' && teachersRes.value.ok) {
+                const data = await teachersRes.value.json();
+                if (data.status === 'success') {
+                    currentSearchResults.push(...data.teachers.slice(0, 5).map(t => ({
+                        id: t.id, type: 'teacher', title: t.name,
+                        subtitle: t.type + ' • ' + (t.expertise_tags || 'No expertise'), data: t
+                    })));
+                }
+            }
+
+            if (subjectsRes.status === 'fulfilled' && subjectsRes.value.ok) {
+                const data = await subjectsRes.value.json();
+                if (data.status === 'success') {
+                    currentSearchResults.push(...data.subjects.slice(0, 5).map(s => ({
+                        id: s.id, type: 'subject', title: s.course_code + ' - ' + s.name,
+                        subtitle: s.program + ' (' + s.units + ' units)', data: s
+                    })));
+                }
+            }
+
+            loadingEl.classList.add('hidden');
+            resultsList.innerHTML = '';
+
+            if (currentSearchResults.length === 0) {
+                noResultsEl.classList.remove('hidden');
+                return;
+            }
+
+            noResultsEl.classList.add('hidden');
+            currentSearchResults.forEach(result => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-r ${result.type === 'teacher' ? 'from-indigo-500 to-blue-600' : 'from-emerald-500 to-teal-600'} rounded-lg flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
+                            ${result.type === 'teacher' ? initialsFromName(result.title) : result.title.charAt(0)}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium text-slate-900 truncate">${escapeHtml(result.title)}</div>
+                            <div class="search-result-type text-indigo-600">${result.type.charAt(0).toUpperCase() + result.type.slice(1)}</div>
+                            <div class="search-result-preview truncate">${escapeHtml(result.subtitle)}</div>
+                        </div>
+                    </div>
+                `;
+                item.addEventListener('click', () => selectSearchResult(result));
+                resultsList.appendChild(item);
+            });
+
+        } catch (err) {
+            if (err.name !== 'AbortError') console.error('Mobile search failed:', err);
+            loadingEl.classList.add('hidden');
+        }
+    }
+}
 
 // --------------------------------------------------
 // Keyboard Shortcuts
@@ -3315,9 +3734,13 @@ document.addEventListener('keydown', (e) => {
 
 // Initialize search when document is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeGlobalSearch);
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeGlobalSearch();
+        initializeMobileSearch();
+    });
 } else {
     initializeGlobalSearch();
+    initializeMobileSearch();
 }
 
 // --------------------------------------------------

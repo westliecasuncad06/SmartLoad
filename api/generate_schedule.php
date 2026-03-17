@@ -454,6 +454,8 @@ try {
         'status'           => 'success',
         'assigned_count'   => $assignedCount,
         'unassigned_count' => $unassignedCount,
+        'ai_enabled'       => $aiEnabled,
+        'ai_calls'         => $aiCalls,
     ]);
 
     $__jsonSent = true;
