@@ -197,7 +197,7 @@ try {
     <link rel="stylesheet" href="css/style.css?v=<?php echo time(); ?>">
 </head>
 <body class="bg-slate-50">
-    <div class="flex h-screen">
+    <div id="appWrapper" class="flex h-screen" style="display:none;">
         <!-- Sidebar Overlay (mobile) -->
         <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden" onclick="closeSidebar()"></div>
 
@@ -1453,34 +1453,38 @@ try {
         </div>
     </div>
 
-    <!-- LOADING OVERLAY -->
-    <div id="loadingOverlay" class="hidden fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center z-[9999] backdrop-blur-sm">
-        <div class="flex flex-col items-center justify-center gap-6">
+    <!-- LOADING OVERLAY (visible by default via inline style; hidden after page load) -->
+    <div id="loadingOverlay" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999;background:linear-gradient(135deg,#0f172a,#1e293b);" class="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center z-[9999] backdrop-blur-sm">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;" class="flex flex-col items-center justify-center gap-6">
             <!-- Logo Container with Spin Animation -->
-            <div class="relative w-24 h-24 flex items-center justify-center">
+            <div style="position:relative;width:6rem;height:6rem;display:flex;align-items:center;justify-content:center;" class="relative w-24 h-24 flex items-center justify-center">
                 <!-- Outer rotating ring -->
-                <div class="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 border-r-indigo-400 animate-spin"></div>
+                <div style="position:absolute;inset:0;border-radius:9999px;border:4px solid transparent;border-top-color:#6366f1;border-right-color:#818cf8;animation:spin 1s linear infinite;" class="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 border-r-indigo-400 animate-spin"></div>
                 
                 <!-- Inner logo -->
-                <div class="relative z-10 bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-lg shadow-2xl">
-                    <i class="fas fa-bolt text-4xl text-white"></i>
+                <div style="position:relative;z-index:10;background:linear-gradient(135deg,#6366f1,#4f46e5);padding:1rem;border-radius:0.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);" class="relative z-10 bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-lg shadow-2xl">
+                    <i class="fas fa-bolt" style="font-size:2.25rem;color:white;"></i>
                 </div>
             </div>
 
             <!-- Loading Text -->
-            <div class="text-center">
-                <h2 class="text-2xl font-bold text-white mb-2">SmartLoad</h2>
-                <p id="loadingText" class="text-slate-300 text-sm">Processing...</p>
+            <div style="text-align:center;" class="text-center">
+                <h2 style="font-size:1.5rem;font-weight:700;color:white;margin-bottom:0.5rem;font-family:'Inter',sans-serif;" class="text-2xl font-bold text-white mb-2">SmartLoad</h2>
+                <p id="loadingText" style="color:#cbd5e1;font-size:0.875rem;font-family:'Inter',sans-serif;" class="text-slate-300 text-sm">Loading...</p>
                 
                 <!-- Animated dots -->
-                <div class="flex items-center justify-center gap-1 mt-3">
-                    <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0s;"></div>
-                    <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0.15s;"></div>
-                    <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0.3s;"></div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:0.25rem;margin-top:0.75rem;" class="flex items-center justify-center gap-1 mt-3">
+                    <div style="width:0.5rem;height:0.5rem;background:#818cf8;border-radius:9999px;animation:bounce 1s infinite;animation-delay:0s;" class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
+                    <div style="width:0.5rem;height:0.5rem;background:#818cf8;border-radius:9999px;animation:bounce 1s infinite;animation-delay:0.15s;" class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
+                    <div style="width:0.5rem;height:0.5rem;background:#818cf8;border-radius:9999px;animation:bounce 1s infinite;animation-delay:0.3s;" class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
                 </div>
             </div>
         </div>
     </div>
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    </style>
 
     <!-- Tailwind (script) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1499,6 +1503,7 @@ try {
             const loadingText = document.getElementById('loadingText');
             if (overlay) {
                 loadingText.textContent = text;
+                overlay.style.display = '';
                 overlay.classList.remove('hidden');
             }
         }
@@ -1507,12 +1512,15 @@ try {
         function hideLoadingOverlay() {
             const overlay = document.getElementById('loadingOverlay');
             if (overlay) {
+                overlay.style.display = 'none';
                 overlay.classList.add('hidden');
             }
         }
 
-        // Show loading on page load
+        // Hide loading overlay and show app when page fully loads
         window.addEventListener('load', function() {
+            var app = document.getElementById('appWrapper');
+            if (app) app.style.display = '';
             hideLoadingOverlay();
         });
     </script>
